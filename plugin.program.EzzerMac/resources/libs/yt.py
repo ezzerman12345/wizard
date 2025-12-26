@@ -45,11 +45,10 @@
 
 
 import re
-import urllib2
-import urllib
-import cgi
-import HTMLParser
+import urllib.request, urllib.error, urllib.parse
 import xbmcgui
+from urllib.parse import parse_qs
+from html import unescape
 
 try: import simplejson as json
 
@@ -67,12 +66,12 @@ def Clean(text):
     text = text.replace('<b>',     '')
     text = text.replace('</b>',    '')
     text = text.replace('&amp;',   '&')
-    text = text.replace('\ufeff', '')
+    text = text.replace('\\ufeff', '')
     return text
 
 def PlayVideo(id, forcePlayer=False):
     import sys
-    dp.create("Loading video",'','Please Wait','')
+    dp.create("Loading video", 'Please Wait')
 
     video, links = GetVideoInformation(id)
 
@@ -83,8 +82,8 @@ def PlayVideo(id, forcePlayer=False):
     title = video['title']
     image = video['thumbnail']
 
-    liz = xbmcgui.ListItem(title, iconImage=image, thumbnailImage=image)
-
+    liz = xbmcgui.ListItem(title)
+    liz.setArt({'icon': image, 'thumb': image})
     liz.setInfo( type="Video", infoLabels={ "Title": title} )
 
     if forcePlayer or len(sys.argv) < 2 or int(sys.argv[1]) == -1:
@@ -104,7 +103,7 @@ def PlayVideo(id, forcePlayer=False):
 
 def PlayVideoB(id, forcePlayer=False):
     import sys
-    dp.create("Loading video",'<>','Please Wait','<>')
+    dp.create("Loading video",'<>\nPlease Wait\n<>')
 
     video, links = GetVideoInformation(id)
 
@@ -115,8 +114,8 @@ def PlayVideoB(id, forcePlayer=False):
     title = video['title']
     image = video['thumbnail']
 
-    liz = xbmcgui.ListItem(title, iconImage=image, thumbnailImage=image)
-
+    liz = xbmcgui.ListItem(title)
+    liz.setArt({'icon': image, 'thumb': image})
     liz.setInfo( type="Video", infoLabels={ "Title": title} )
 
     import xbmc
@@ -125,7 +124,6 @@ def PlayVideoB(id, forcePlayer=False):
     pl.add(url, liz)
     dp.close()
     xbmc.Player().play(pl, windowed=False)
-
 
 def GetVideoInformation(id):
     #id = 'H7iQ4sAf0OE' #test for HLSVP
@@ -142,7 +140,6 @@ def GetVideoInformation(id):
     except : pass
     
     return video, links
-
 
 def GetVideoInfo(id):
     url  = 'http://www.youtube.com/watch?v=%s&safeSearch=none' % id
@@ -178,48 +175,48 @@ def Scrape(html):
 
     flashvars = ExtractFlashVars(html)
 
-    if not flashvars.has_key(u"url_encoded_fmt_stream_map"):
+    if "url_encoded_fmt_stream_map" not in flashvars:
         return video, links
 
-    if flashvars.has_key(u"ttsurl"):
-        video[u"ttsurl"] = flashvars[u"ttsurl"]
+    if "ttsurl" in flashvars:
+        video["ttsurl"] = flashvars["ttsurl"]
 
-    if flashvars.has_key(u"hlsvp"):                               
-        video[u"hlsvp"] = flashvars[u"hlsvp"]    
+    if "hlsvp" in flashvars:                               
+        video["hlsvp"] = flashvars["hlsvp"]    
 
-    for url_desc in flashvars[u"url_encoded_fmt_stream_map"].split(u","):
-        url_desc_map = cgi.parse_qs(url_desc)
+    for url_desc in flashvars["url_encoded_fmt_stream_map"].split(","):
+        url_desc_map = parse_qs(url_desc)
         
-        if not (url_desc_map.has_key(u"url") or url_desc_map.has_key(u"stream")):
+        if not ("url" in url_desc_map or "stream" in url_desc_map):
             continue
 
-        key = int(url_desc_map[u"itag"][0])
-        url = u""
+        key = int(url_desc_map["itag"][0])
+        url = ""
         
-        if url_desc_map.has_key(u"url"):
-            url = urllib.unquote(url_desc_map[u"url"][0])
+        if "url" in url_desc_map:
+            url = urllib.parse.unquote(url_desc_map["url"][0])
         
-        elif url_desc_map.has_key(u"conn") and url_desc_map.has_key(u"stream"):
-            url = urllib.unquote(url_desc_map[u"conn"][0])
+        elif "conn" in url_desc_map and "stream" in url_desc_map:
+            url = urllib.parse.unquote(url_desc_map["conn"][0])
             
             if url.rfind("/") < len(url) -1:
                 url = url + "/"
             
-            url = url + urllib.unquote(url_desc_map[u"stream"][0])
+            url = url + urllib.parse.unquote(url_desc_map["stream"][0])
         
-        elif url_desc_map.has_key(u"stream") and not url_desc_map.has_key(u"conn"):
-            url = urllib.unquote(url_desc_map[u"stream"][0])
+        elif "stream" in url_desc_map and "conn" not in url_desc_map:
+            url = urllib.parse.unquote(url_desc_map["stream"][0])
 
-        if url_desc_map.has_key(u"sig"):
-            url = url + u"&signature=" + url_desc_map[u"sig"][0]
+        if "sig" in url_desc_map:
+            url = url + "&signature=" + url_desc_map["sig"][0]
         
-        elif url_desc_map.has_key(u"s"):
-            sig = url_desc_map[u"s"][0]
+        elif "s" in url_desc_map:
+            sig = url_desc_map["s"][0]
             #url = url + u"&signature=" + DecryptSignature(sig)
            
             flashvars = ExtractFlashVars(html, assets=True)
-            js        = flashvars[u"js"]    
-            url      += u"&signature=" + DecryptSignatureNew(sig, js)          
+            js        = flashvars["js"]    
+            url      += "&signature=" + DecryptSignatureNew(sig, js)          
 
         if key not in stereo:
             links.append([key, url])
@@ -290,18 +287,18 @@ def ExtractFlashVars(data, assets=False):
 
 
 def FetchPage(url):
-    req = urllib2.Request(url)
+    req = urllib.request.Request(url)
     req.add_header('User-Agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3')
     req.add_header('Referer',    'http://www.youtube.com/')
 
-    return urllib2.urlopen(req).read().decode("utf-8")
+    return urllib.request.urlopen(req).read().decode("utf-8")
 
 
 def replaceHTMLCodes(txt):
     # Fix missing ; in &#<number>;
     txt = re.sub("(&#[0-9]+)([^;^0-9]+)", "\\1;\\2", txt)
 
-    txt = HTMLParser.HTMLParser().unescape(txt)
+    txt = unescape(txt)
     txt = txt.replace("&amp;", "&")
     return txt
 
@@ -463,17 +460,17 @@ def DecryptSignatureNew(s, playerUrl):
     allLocalVarNamesTab = []
     playerData          = ''    
 
-    request = urllib2.Request(playerUrl)
+    request = urllib.request.Request(playerUrl)
     #res        = core._fetchPage({u"link": playerUrl})
     #playerData = res["content"]
             
     try:
-        playerData = urllib2.urlopen(request).read()
+        playerData = urllib.request.urlopen(request).read()
         playerData = playerData.decode('utf-8', 'ignore')
     
-    except Exception, e:
+    except Exception as e:
         #print str(e)
-        print 'Failed to decode playerData'
+        print('Failed to decode playerData')
         return ''
         
     # get main function name 
@@ -512,7 +509,7 @@ def DecryptSignatureNew(s, playerUrl):
         algoCodeObj = compile(fullAlgoCode, '', 'exec')
     
     except:
-        print 'Failed to obtain decryptSignature code'
+        print('Failed to obtain decryptSignature code')
         return ''
 
     # for security allow only flew python global function in algo code
@@ -526,7 +523,7 @@ def DecryptSignatureNew(s, playerUrl):
         exec(algoCodeObj, vGlobals, vLocals)
     
     except:
-        print 'decryptSignature code failed to exceute correctly'
+        print('decryptSignature code failed to exceute correctly')
         return ''
 
     #print 'Decrypted signature = [%s]' % vLocals['outSignature']
@@ -540,7 +537,7 @@ def _getfullAlgoCode(mainFunName, recDepth=0):
     global allLocalVarNamesTab
     
     if MAX_REC_DEPTH <= recDepth:
-        print '_getfullAlgoCode: Maximum recursion depth exceeded'
+        print('_getfullAlgoCode: Maximum recursion depth exceeded')
         return 
 
     funBody = _getLocalFunBody(mainFunName)

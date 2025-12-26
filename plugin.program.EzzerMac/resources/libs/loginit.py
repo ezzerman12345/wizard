@@ -19,12 +19,11 @@
 
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, sys, xbmcvfs, glob
 import shutil
-import urllib2,urllib
+import urllib.request, urllib.error, urllib.parse
 import re
 import uservar
 import time
-try:    from sqlite3 import dbapi2 as database
-except: from pysqlite2 import dbapi2 as database
+from sqlite3 import dbapi2 as database
 from datetime import date, datetime, timedelta
 from resources.libs import wizard as wiz
 
@@ -32,7 +31,7 @@ ADDON_ID       = uservar.ADDON_ID
 ADDONTITLE     = uservar.ADDONTITLE
 ADDON          = wiz.addonId(ADDON_ID)
 DIALOG         = xbmcgui.Dialog()
-HOME           = xbmc.translatePath('special://home/')
+HOME           = xbmcvfs.translatePath('special://home/')
 ADDONS         = os.path.join(HOME,      'addons')
 USERDATA       = os.path.join(HOME,      'userdata')
 PLUGIN         = os.path.join(ADDONS,    ADDON_ID)
@@ -299,7 +298,7 @@ def updateLogin(do, who):
 				user = addonid.getSetting(default)
 				wiz.setS(saved, user)
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name),'[COLOR %s]Login Data: Saved![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Login Data] Unable to Update %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 		else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name),'[COLOR %s]Login Data: Not Registered![/COLOR]' % COLOR2, 2000, icon)
 	elif do == 'restore':
@@ -313,7 +312,7 @@ def updateLogin(do, who):
 				user = addonid.getSetting(default)
 				wiz.setS(saved, user)
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name), '[COLOR %s]Login: Restored![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Login Data] Unable to Restore %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 		#else: wiz.LogNotify(name,'login Data: [COLOR red]Not Found![/COLOR]', 2000, icon)
 	elif do == 'clearaddon':
@@ -330,7 +329,7 @@ def updateLogin(do, who):
 						else: wiz.log('Removing Line: %s' % line, xbmc.LOGNOTICE)
 				f.close()
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name),'[COLOR %s]Addon Data: Cleared![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Trakt Data] Unable to Clear Addon %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 	wiz.refresh()
 

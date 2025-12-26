@@ -1,3 +1,39 @@
+v2.0.9
+- Major cleanup and modernization for Kodi 20+ and Python 3 only.
+- Removed all code and compatibility for Kodi 17 and older.
+- Removed all Python 2 compatibility code.
+- Removed Alluc settings and all related code (service no longer active).
+- Removed all 3rd-party wizard code and references.
+- Removed support and references for deprecated/abandoned addons:
+  Neptune Rising, Placenta, Incursion, SubZero, Streamhub, Not Sure, Death Streams, At The Flix, Man Cave Flix, StarTec.
+- Removed references to deprecated addons and resolvers:
+  Exodus, Metalliq, Meta, SALTS, SALTSHD, Velocity, RoyalWe, VelocityKids, Specto, URLResolver, MrKnowResolver.
+- Removed unused or broken setting: "Show Original Wizard Layout" (`ogwiz`).
+- Improved and integrated speed tester for better reliability and Kodi UI feedback.
+- General code cleanup and optimization for efficiency and maintainability.
+- Kept and verified maintenance, tools, builds, and speed tester features
+v2.0.8
+-Update remove addon, Force close, Images.
+v2.0.7 
+-Update speedtest
+v2.0.6
+-Update builds from prompt
+v2.0.5
+-Update Save and auth Debrid info 
+v2.0.4
+-Update for Nexus
+v2.0.3
+-Update to Python 3
+v2.0.2
+-Removed Installables
+-Added support for a few shortcuts for builders to use in their skin's submenus. Template favourites.xml added to the "resources/text examples" folder. Change the plugin name to your own then copy over to userdata folder to use them.
+
+v2.0.1
+-Testing bypass skins swap for Fresh Install to prevent crashing. Touch up's to theme. Bug fixes.
+
+v2.0.0
+-Converted to Matrix
+
 v1.2.5 - Beta
 -Added Zlib to correct kodi 18 not extracting zip
 -Change all mods to reflect this change: >17 import zlib- default, wizard and extract

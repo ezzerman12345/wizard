@@ -46,13 +46,13 @@
 #                                                                          #
 ############################################################################
 
-import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, sys, xbmcvfs, glob
+import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, xbmcvfs, glob
 import shutil
-import urllib2,urllib
+import urllib.request, urllib.error, urllib.parse
 import re
 import uservar
 from datetime import date, datetime, timedelta
-from resources.libs import extract, downloader, notify, loginit, debridit, allucit, traktit, skinSwitch, uploadLog, wizard as wiz
+from resources.libs import extract, downloader, notify, loginit, debridit, traktit, skinSwitch, uploadLog, wizard as wiz
 
 ADDON_ID       = uservar.ADDON_ID
 ADDONTITLE     = uservar.ADDONTITLE
@@ -62,9 +62,9 @@ ADDONPATH      = wiz.addonInfo(ADDON_ID,'path')
 ADDONID        = wiz.addonInfo(ADDON_ID,'id')
 DIALOG         = xbmcgui.Dialog()
 DP             = xbmcgui.DialogProgress()
-HOME           = xbmc.translatePath('special://home/')
-PROFILE        = xbmc.translatePath('special://profile/')
-KODIHOME       = xbmc.translatePath('special://xbmc/')
+HOME           = xbmcvfs.translatePath('special://home/')
+PROFILE        = xbmcvfs.translatePath('special://profile/')
+KODIHOME       = xbmcvfs.translatePath('special://xbmc/')
 ADDONS         = os.path.join(HOME,     'addons')
 KODIADDONS     = os.path.join(KODIHOME, 'addons')
 USERDATA       = os.path.join(HOME,     'userdata')
@@ -93,11 +93,9 @@ AUTOFEQ        = wiz.getS('autocleanfeq')
 AUTONEXTRUN    = wiz.getS('nextautocleanup')
 TRAKTSAVE      = wiz.getS('traktlastsave')
 REALSAVE       = wiz.getS('debridlastsave')
-ALLUCSAVE      = wiz.getS('alluclastsave')
 LOGINSAVE      = wiz.getS('loginlastsave')
 KEEPTRAKT      = wiz.getS('keeptrakt')
 KEEPREAL       = wiz.getS('keepdebrid')
-KEEPALLUC      = wiz.getS('keepalluc')
 KEEPLOGIN      = wiz.getS('keeplogin')
 INSTALLED      = wiz.getS('installed')
 EXTRACT        = wiz.getS('extract')
@@ -152,10 +150,10 @@ def checkUpdate():
 		wiz.setS('latestversion', version)
 		if version > BUILDVERSION:
 			if DISABLEUPDATE == 'false':
-				wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s] Opening Update Window" % (BUILDVERSION, version), xbmc.LOGNOTICE)
+				wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s] Opening Update Window" % (BUILDVERSION, version), xbmc.LOGINFO)
 				notify.updateWindow(BUILDNAME, BUILDVERSION, version, icon, fanart)
-			else: wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s] Update Window Disabled" % (BUILDVERSION, version), xbmc.LOGNOTICE)
-		else: wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s]" % (BUILDVERSION, version), xbmc.LOGNOTICE)
+			else: wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s] Update Window Disabled" % (BUILDVERSION, version), xbmc.LOGINFO)
+		else: wiz.log("[Check Updates] [Installed Version: %s] [Current Version: %s]" % (BUILDVERSION, version), xbmc.LOGINFO)
 	else: wiz.log("[Check Updates] ERROR: Unable to find build version in build text file", xbmc.LOGERROR)
 
 def checkSkin():
@@ -166,10 +164,10 @@ def checkSkin():
 	gotoskin = False
 	if not DEFAULTSKIN == '':
 		if os.path.exists(os.path.join(ADDONS, DEFAULTSKIN)):
-			if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()), "Would you like to set the skin back to:[/COLOR]", '[COLOR %s]%s[/COLOR]' % (COLOR1, DEFAULTNAME)):
+			if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()) + "\nWould you like to set the skin back to:[/COLOR]" + '[\nCOLOR %s]%s[/COLOR]' % (COLOR1, DEFAULTNAME)):
 				gotoskin = DEFAULTSKIN
 				gotoname = DEFAULTNAME
-			else: wiz.log("Skin was not reset", xbmc.LOGNOTICE); wiz.setS('defaultskinignore', 'true'); gotoskin = False
+			else: wiz.log("Skin was not reset", xbmc.LOGINFO); wiz.setS('defaultskinignore', 'true'); gotoskin = False
 		else: wiz.setS('defaultskin', ''); wiz.setS('defaultskinname', ''); DEFAULTSKIN = ''; DEFAULTNAME = ''
 	if DEFAULTSKIN == '':
 		skinname = []
@@ -177,28 +175,28 @@ def checkSkin():
 		for folder in glob.glob(os.path.join(ADDONS, 'skin.*/')):
 			xml = "%s/addon.xml" % folder
 			if os.path.exists(xml):
-				f  = open(xml,mode='r'); g = f.read().replace('\n','').replace('\r','').replace('\t',''); f.close();
+				f  = open(xml,mode='r', encoding='utf-8'); g = f.read().replace('\n','').replace('\r','').replace('\t',''); f.close();
 				match  = wiz.parseDOM(g, 'addon', ret='id')
 				match2 = wiz.parseDOM(g, 'addon', ret='name')
-				wiz.log("%s: %s" % (folder, str(match[0])), xbmc.LOGNOTICE)
+				wiz.log("%s: %s" % (folder, str(match[0])), xbmc.LOGINFO)
 				if len(match) > 0: skinlist.append(str(match[0])); skinname.append(str(match2[0]))
-				else: wiz.log("ID not found for %s" % folder, xbmc.LOGNOTICE)
-			else: wiz.log("ID not found for %s" % folder, xbmc.LOGNOTICE)
+				else: wiz.log("ID not found for %s" % folder, xbmc.LOGINFO)
+			else: wiz.log("ID not found for %s" % folder, xbmc.LOGINFO)
 		if len(skinlist) > 0:
 			if len(skinlist) > 1:
-				if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()), "Would you like to view a list of avaliable skins?[/COLOR]"):
+				if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()) + "\nWould you like to view a list of avaliable skins?[/COLOR]"):
 					choice = DIALOG.select("Select skin to switch to!", skinname)
-					if choice == -1: wiz.log("Skin was not reset", xbmc.LOGNOTICE); wiz.setS('defaultskinignore', 'true')
+					if choice == -1: wiz.log("Skin was not reset", xbmc.LOGINFO); wiz.setS('defaultskinignore', 'true')
 					else: 
 						gotoskin = skinlist[choice]
 						gotoname = skinname[choice]
-				else: wiz.log("Skin was not reset", xbmc.LOGNOTICE); wiz.setS('defaultskinignore', 'true')
+				else: wiz.log("Skin was not reset", xbmc.LOGINFO); wiz.setS('defaultskinignore', 'true')
 			else:
-				if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()), "Would you like to set the skin back to:[/COLOR]", '[COLOR %s]%s[/COLOR]' % (COLOR1, skinname[0])):
+				if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that the skin has been set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, SKIN[5:].title()) + "\nWould you like to set the skin back to:[/COLOR]" + '\n[COLOR %s]%s[/COLOR]' % (COLOR1, skinname[0])):
 					gotoskin = skinlist[0]
 					gotoname = skinname[0]
-				else: wiz.log("Skin was not reset", xbmc.LOGNOTICE); wiz.setS('defaultskinignore', 'true')
-		else: wiz.log("No skins found in addons folder.", xbmc.LOGNOTICE); wiz.setS('defaultskinignore', 'true'); gotoskin = False
+				else: wiz.log("Skin was not reset", xbmc.LOGINFO); wiz.setS('defaultskinignore', 'true')
+		else: wiz.log("No skins found in addons folder.", xbmc.LOGINFO); wiz.setS('defaultskinignore', 'true'); gotoskin = False
 	if gotoskin:
 		skinSwitch.swapSkins(gotoskin)
 		x = 0
@@ -211,53 +209,32 @@ def checkSkin():
 			wiz.ebi('SendClick(11)')
 			wiz.lookandFeelData('restore')
 		else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE),'[COLOR %s]Skin Swap Timed Out![/COLOR]' % COLOR2)
-	wiz.log("[Build Check] Invalid Skin Check End", xbmc.LOGNOTICE)
+	wiz.log("[Build Check] Invalid Skin Check End", xbmc.LOGINFO)
 
 while xbmc.Player().isPlayingVideo():
 	xbmc.sleep(1000)
 
-if KODIV >= 17:
-	NOW = datetime.now()
-	temp = wiz.getS('kodi17iscrap')
-	if not temp == '':
-		if temp > str(NOW - timedelta(minutes=2)):
-			wiz.log("Killing Start Up Script")
-			sys.exit()
-	wiz.log("%s" % (NOW))
-	wiz.setS('kodi17iscrap', str(NOW))
-	xbmc.sleep(1000)
-	if not wiz.getS('kodi17iscrap') == str(NOW):
-		wiz.log("Killing Start Up Script")
-		sys.exit()
-	else:
-		wiz.log("Continuing Start Up Script")
-
-wiz.log("[Path Check] Started", xbmc.LOGNOTICE)
-path = os.path.split(ADDONPATH)
-if not ADDONID == path[1]: DIALOG.ok(ADDONTITLE, '[COLOR %s]Please make sure that the plugin folder is the same as the ADDON_ID.[/COLOR]' % COLOR2, '[COLOR %s]Plugin ID:[/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, ADDONID), '[COLOR %s]Plugin Folder:[/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, path)); wiz.log("[Path Check] ADDON_ID and plugin folder doesnt match. %s / %s " % (ADDONID, path))
-else: wiz.log("[Path Check] Good!", xbmc.LOGNOTICE)
-
 if KODIADDONS in ADDONPATH:
-	wiz.log("Copying path to addons dir", xbmc.LOGNOTICE)
+	wiz.log("Copying path to addons dir", xbmc.LOGINFO)
 	if not os.path.exists(ADDONS): os.makedirs(ADDONS)
-	newpath = xbmc.translatePath(os.path.join('special://home/addons/', ADDONID))
+	newpath = xbmcvfs.translatePath(os.path.join('special://home/addons/', ADDONID))
 	if os.path.exists(newpath):
-		wiz.log("Folder already exists, cleaning House", xbmc.LOGNOTICE)
+		wiz.log("Folder already exists, cleaning House", xbmc.LOGINFO)
 		wiz.cleanHouse(newpath)
 		wiz.removeFolder(newpath)
 	try:
 		wiz.copytree(ADDONPATH, newpath)
-	except Exception, e:
+	except Exception as e:
 		pass
 	wiz.forceUpdate(True)
 
 try:
-	mybuilds = xbmc.translatePath(MYBUILDS)
+	mybuilds = xbmcvfs.translatePath(MYBUILDS)
 	if not os.path.exists(mybuilds): xbmcvfs.mkdirs(mybuilds)
 except:
 	pass
 
-wiz.log("[Auto Install Repo] Started", xbmc.LOGNOTICE)
+wiz.log("[Auto Install Repo] Started", xbmc.LOGINFO)
 if AUTOINSTALL == 'Yes' and not os.path.exists(os.path.join(ADDONS, REPOID)):
 	workingxml = wiz.workingURL(REPOADDONXML)
 	if workingxml == True:
@@ -266,7 +243,7 @@ if AUTOINSTALL == 'Yes' and not os.path.exists(os.path.join(ADDONS, REPOID)):
 			installzip = '%s-%s.zip' % (REPOID, ver[0])
 			workingrepo = wiz.workingURL(REPOZIPURL+installzip)
 			if workingrepo == True:
-				DP.create(ADDONTITLE,'Downloading Repo...','', 'Please Wait')
+				DP.create(ADDONTITLE,'Downloading Repo...\nPlease Wait')
 				if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
 				lib=os.path.join(PACKAGES, installzip)
 				try: os.remove(lib)
@@ -274,7 +251,7 @@ if AUTOINSTALL == 'Yes' and not os.path.exists(os.path.join(ADDONS, REPOID)):
 				downloader.download(REPOZIPURL+installzip,lib, DP)
 				extract.all(lib, ADDONS, DP)
 				try:
-					f = open(os.path.join(ADDONS, REPOID, 'addon.xml'), mode='r'); g = f.read(); f.close()
+					f = open(os.path.join(ADDONS, REPOID, 'addon.xml'), mode='r', encoding='utf-8'); g = f.read(); f.close()
 					name = wiz.parseDOM(g, 'addon', ret='name', attrs = {'id': REPOID})
 					wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name[0]), "[COLOR %s]Add-on updated[/COLOR]" % COLOR2, icon=os.path.join(ADDONS, REPOID, 'icon.png'))
 				except:
@@ -283,7 +260,7 @@ if AUTOINSTALL == 'Yes' and not os.path.exists(os.path.join(ADDONS, REPOID)):
 				DP.close()
 				xbmc.sleep(500)
 				wiz.forceUpdate(True)
-				wiz.log("[Auto Install Repo] Successfully Installed", xbmc.LOGNOTICE)
+				wiz.log("[Auto Install Repo] Successfully Installed", xbmc.LOGINFO)
 			else: 
 				wiz.LogNotify("[COLOR %s]Repo Install Error[/COLOR]" % COLOR1, "[COLOR %s]Invalid url for zip![/COLOR]" % COLOR2)
 				wiz.log("[Auto Install Repo] Was unable to create a working url for repository. %s" % workingrepo, xbmc.LOGERROR)
@@ -292,15 +269,15 @@ if AUTOINSTALL == 'Yes' and not os.path.exists(os.path.join(ADDONS, REPOID)):
 	else: 
 		wiz.LogNotify("[COLOR %s]Repo Install Error[/COLOR]" % COLOR1, "[COLOR %s]Invalid addon.xml file![/COLOR]" % COLOR2)
 		wiz.log("[Auto Install Repo] Unable to read the addon.xml file.", xbmc.LOGERROR)
-elif not AUTOINSTALL == 'Yes': wiz.log("[Auto Install Repo] Not Enabled", xbmc.LOGNOTICE)
+elif not AUTOINSTALL == 'Yes': wiz.log("[Auto Install Repo] Not Enabled", xbmc.LOGINFO)
 elif os.path.exists(os.path.join(ADDONS, REPOID)): wiz.log("[Auto Install Repo] Repository already installed")
 
-wiz.log("[Auto Update Wizard] Started", xbmc.LOGNOTICE)
+wiz.log("[Auto Update Wizard] Started", xbmc.LOGINFO)
 if AUTOUPDATE == 'Yes':
 	wiz.wizardUpdate('startup')
-else: wiz.log("[Auto Update Wizard] Not Enabled", xbmc.LOGNOTICE)
+else: wiz.log("[Auto Update Wizard] Not Enabled", xbmc.LOGINFO)
 
-wiz.log("[Notifications] Started", xbmc.LOGNOTICE)
+wiz.log("[Notifications] Started", xbmc.LOGINFO)
 if ENABLE == 'Yes':
 	if not NOTIFY == 'true':
 		url = wiz.workingURL(NOTIFICATION)
@@ -312,38 +289,38 @@ if ENABLE == 'Yes':
 					if id == NOTEID:
 						if NOTEDISMISS == 'false':
 							notify.notification(msg)
-						else: wiz.log("[Notifications] id[%s] Dismissed" % int(id), xbmc.LOGNOTICE)
+						else: wiz.log("[Notifications] id[%s] Dismissed" % int(id), xbmc.LOGINFO)
 					elif id > NOTEID:
-						wiz.log("[Notifications] id: %s" % str(id), xbmc.LOGNOTICE)
+						wiz.log("[Notifications] id: %s" % str(id), xbmc.LOGINFO)
 						wiz.setS('noteid', str(id))
 						wiz.setS('notedismiss', 'false')
 						notify.notification(msg=msg)
-						wiz.log("[Notifications] Complete", xbmc.LOGNOTICE)
-				except Exception, e:
+						wiz.log("[Notifications] Complete", xbmc.LOGINFO)
+				except Exception as e:
 					wiz.log("Error on Notifications Window: %s" % str(e), xbmc.LOGERROR)
 			else: wiz.log("[Notifications] Text File not formated Correctly")
-		else: wiz.log("[Notifications] URL(%s): %s" % (NOTIFICATION, url), xbmc.LOGNOTICE)
-	else: wiz.log("[Notifications] Turned Off", xbmc.LOGNOTICE)
-else: wiz.log("[Notifications] Not Enabled", xbmc.LOGNOTICE)
+		else: wiz.log("[Notifications] URL(%s): %s" % (NOTIFICATION, url), xbmc.LOGINFO)
+	else: wiz.log("[Notifications] Turned Off", xbmc.LOGINFO)
+else: wiz.log("[Notifications] Not Enabled", xbmc.LOGINFO)
 
-wiz.log("[Installed Check] Started", xbmc.LOGNOTICE)
+wiz.log("[Installed Check] Started", xbmc.LOGINFO)
 if INSTALLED == 'true':
 	if KODIV >= 17:
 		wiz.kodi17Fix()
-		if SKIN in ['skin.confluence', 'skin.estuary']:
+		if SKIN in ['skin.estuary']:
 			checkSkin()
 		FAILED = True
 	elif not EXTRACT == '100' and not BUILDNAME == "":
-		wiz.log("[Installed Check] Build was extracted %s/100 with [ERRORS: %s]" % (EXTRACT, EXTERROR), xbmc.LOGNOTICE)
-		yes=DIALOG.yesno(ADDONTITLE, '[COLOR %s]%s[/COLOR] [COLOR %s]was not installed correctly!' % (COLOR1, COLOR2, BUILDNAME), 'Installed: [COLOR %s]%s[/COLOR] / Error Count: [COLOR %s]%s[/COLOR]' % (COLOR1, EXTRACT, COLOR1, EXTERROR), 'Would you like to try again?[/COLOR]', nolabel='[B]No Thanks![/B]', yeslabel='[B]Retry Install[/B]')
+		wiz.log("[Installed Check] Build was extracted %s/100 with [ERRORS: %s]" % (EXTRACT, EXTERROR), xbmc.LOGINFO)
+		yes=DIALOG.yesno(ADDONTITLE, '[COLOR %s]%s[/COLOR] [COLOR %s]was not installed correctly!' % (COLOR1, COLOR2, BUILDNAME) + '\nInstalled: [COLOR %s]%s[/COLOR] / Error Count: [COLOR %s]%s[/COLOR]' % (COLOR1, EXTRACT, COLOR1, EXTERROR) + '\nWould you like to try again?[/COLOR]', nolabel='[B]No Thanks![/B]', yeslabel='[B]Retry Install[/B]')
 		wiz.clearS('build')
 		FAILED = True
 		if yes: 
-			wiz.ebi("PlayMedia(plugin://%s/?mode=install&name=%s&url=fresh)" % (ADDON_ID, urllib.quote_plus(BUILDNAME)))
-			wiz.log("[Installed Check] Fresh Install Re-activated", xbmc.LOGNOTICE)
+			wiz.ebi("PlayMedia(plugin://%s/?mode=install&name=%s&url=fresh)" % (ADDON_ID, urllib.parse.quote_plus(BUILDNAME)))
+			wiz.log("[Installed Check] Fresh Install Re-activated", xbmc.LOGINFO)
 		else: wiz.log("[Installed Check] Reinstall Ignored")
-	elif SKIN in ['skin.confluence', 'skin.estuary']:
-		wiz.log("[Installed Check] Incorrect skin: %s" % SKIN, xbmc.LOGNOTICE)
+	elif SKIN in ['skin.estuary']:
+		wiz.log("[Installed Check] Incorrect skin: %s" % SKIN, xbmc.LOGINFO)
 		defaults = wiz.getS('defaultskin')
 		if not defaults == '':
 			if os.path.exists(os.path.join(ADDONS, defaults)):
@@ -361,81 +338,81 @@ if INSTALLED == 'true':
 			gui = wiz.checkBuild(BUILDNAME, 'gui')
 			FAILED = True
 			if gui == 'http://':
-				wiz.log("[Installed Check] Guifix was set to http://", xbmc.LOGNOTICE)
-				DIALOG.ok(ADDONTITLE, "[COLOR %s]It looks like the skin settings was not applied to the build." % COLOR2, "Sadly no gui fix was attatched to the build", "You will need to reinstall the build and make sure to do a force close[/COLOR]")
+				wiz.log("[Installed Check] Guifix was set to http://", xbmc.LOGINFO)
+				DIALOG.ok(ADDONTITLE, "[COLOR %s]It looks like the skin settings was not applied to the build." % COLOR2 + "\nSadly no gui fix was attatched to the build" + "\nYou will need to reinstall the build and make sure to do a force close[/COLOR]")
 			elif wiz.workingURL(gui):
-				yes=DIALOG.yesno(ADDONTITLE, '%s was not installed correctly!' % BUILDNAME, 'It looks like the skin settings was not applied to the build.', 'Would you like to apply the GuiFix?', nolabel='[B]No, Cancel[/B]', yeslabel='[B]Apply Fix[/B]')
-				if yes: wiz.ebi("PlayMedia(plugin://%s/?mode=install&name=%s&url=gui)" % (ADDON_ID, urllib.quote_plus(BUILDNAME))); wiz.log("[Installed Check] Guifix attempting to install")
-				else: wiz.log('[Installed Check] Guifix url working but cancelled: %s' % gui, xbmc.LOGNOTICE)
+				yes=DIALOG.yesno(ADDONTITLE, '%s was not installed correctly!' % BUILDNAME + '\nIt looks like the skin settings was not applied to the build.\nWould you like to apply the GuiFix?', nolabel='[B]No, Cancel[/B]', yeslabel='[B]Apply Fix[/B]')
+				if yes: wiz.ebi("PlayMedia(plugin://%s/?mode=install&name=%s&url=gui)" % (ADDON_ID, urllib.parse.quote_plus(BUILDNAME))); wiz.log("[Installed Check] Guifix attempting to install")
+				else: wiz.log('[Installed Check] Guifix url working but cancelled: %s' % gui, xbmc.LOGINFO)
 			else:
-				DIALOG.ok(ADDONTITLE, "[COLOR %s]It looks like the skin settings was not applied to the build." % COLOR2, "Sadly no gui fix was attatched to the build", "You will need to reinstall the build and make sure to do a force close[/COLOR]")
-				wiz.log('[Installed Check] Guifix url not working: %s' % gui, xbmc.LOGNOTICE)
+				DIALOG.ok(ADDONTITLE, "[COLOR %s]It looks like the skin settings was not applied to the build." % COLOR2 + "\nSadly no gui fix was attatched to the build\nYou will need to reinstall the build and make sure to do a force close[/COLOR]")
+				wiz.log('[Installed Check] Guifix url not working: %s' % gui, xbmc.LOGINFO)
 	else:
-		wiz.log('[Installed Check] Install seems to be completed correctly', xbmc.LOGNOTICE)
+		wiz.log('[Installed Check] Install seems to be completed correctly', xbmc.LOGINFO)
 	if not wiz.getS('pvrclient') == "":
 		wiz.toggleAddon(wiz.getS('pvrclient'), 1)
 		wiz.ebi('StartPVRManager')
 	wiz.addonUpdates('reset')
-	if KEEPTRAKT == 'true': traktit.traktIt('restore', 'all'); wiz.log('[Installed Check] Restoring Trakt Data', xbmc.LOGNOTICE)
-	if KEEPREAL  == 'true': debridit.debridIt('restore', 'all'); wiz.log('[Installed Check] Restoring Real Debrid Data', xbmc.LOGNOTICE)
-	if KEEPLOGIN == 'true': loginit.loginIt('restore', 'all'); wiz.log('[Installed Check] Restoring Login Data', xbmc.LOGNOTICE)
+	if KEEPTRAKT == 'true': traktit.traktIt('restore', 'all'); wiz.log('[Installed Check] Restoring Trakt Data', xbmc.LOGINFO)
+	if KEEPREAL  == 'true': debridit.debridIt('restore', 'all'); wiz.log('[Installed Check] Restoring Real Debrid Data', xbmc.LOGINFO)
+	if KEEPLOGIN == 'true': loginit.loginIt('restore', 'all'); wiz.log('[Installed Check] Restoring Login Data', xbmc.LOGINFO)
 	wiz.clearS('install')
-else: wiz.log("[Installed Check] Not Enabled", xbmc.LOGNOTICE)
+else: wiz.log("[Installed Check] Not Enabled", xbmc.LOGINFO)
 
 if FAILED == False:
-	wiz.log("[Build Check] Started", xbmc.LOGNOTICE)
+	wiz.log("[Build Check] Started", xbmc.LOGINFO)
 	if not WORKING:
-		wiz.log("[Build Check] Not a valid URL for Build File: %s" % BUILDFILE, xbmc.LOGNOTICE)
+		wiz.log("[Build Check] Not a valid URL for Build File: %s" % BUILDFILE, xbmc.LOGINFO)
 	elif BUILDCHECK == '' and BUILDNAME == '':
-		wiz.log("[Build Check] First Run", xbmc.LOGNOTICE)
+		wiz.log("[Build Check] First Run", xbmc.LOGINFO)
 		notify.firstRunSettings()
 		xbmc.sleep(500)
 		notify.firstRun()
 		xbmc.sleep(500)
 		wiz.setS('lastbuildcheck', str(NEXTCHECK))
 	elif not BUILDNAME == '':
-		wiz.log("[Build Check] Build Installed", xbmc.LOGNOTICE)
-		if SKIN in ['skin.confluence', 'skin.estuary'] and not DEFAULTIGNORE == 'true':
+		wiz.log("[Build Check] Build Installed", xbmc.LOGINFO)
+		if SKIN in ['skin.estuary'] and not DEFAULTIGNORE == 'true':
 			checkSkin()
-			wiz.log("[Build Check] Build Installed: Checking Updates", xbmc.LOGNOTICE)
+			wiz.log("[Build Check] Build Installed: Checking Updates", xbmc.LOGINFO)
 			wiz.setS('lastbuildcheck', str(NEXTCHECK))
 			checkUpdate()
 		elif BUILDCHECK <= str(TODAY):
-			wiz.log("[Build Check] Build Installed: Checking Updates", xbmc.LOGNOTICE)
+			wiz.log("[Build Check] Build Installed: Checking Updates", xbmc.LOGINFO)
 			wiz.setS('lastbuildcheck', str(NEXTCHECK))
 			checkUpdate()
 		else: 
-			wiz.log("[Build Check] Build Installed: Next check isnt until: %s / TODAY is: %s" % (BUILDCHECK, str(TODAY)), xbmc.LOGNOTICE)
+			wiz.log("[Build Check] Build Installed: Next check isnt until: %s / TODAY is: %s" % (BUILDCHECK, str(TODAY)), xbmc.LOGINFO)
 
-wiz.log("[Trakt Data] Started", xbmc.LOGNOTICE)
+wiz.log("[Trakt Data] Started", xbmc.LOGINFO)
 if KEEPTRAKT == 'true':
 	if TRAKTSAVE <= str(TODAY):
-		wiz.log("[Trakt Data] Saving all Data", xbmc.LOGNOTICE)
+		wiz.log("[Trakt Data] Saving all Data", xbmc.LOGINFO)
 		traktit.autoUpdate('all')
 		wiz.setS('traktlastsave', str(THREEDAYS))
 	else: 
-		wiz.log("[Trakt Data] Next Auto Save isnt until: %s / TODAY is: %s" % (TRAKTSAVE, str(TODAY)), xbmc.LOGNOTICE)
-else: wiz.log("[Trakt Data] Not Enabled", xbmc.LOGNOTICE)
+		wiz.log("[Trakt Data] Next Auto Save isnt until: %s / TODAY is: %s" % (TRAKTSAVE, str(TODAY)), xbmc.LOGINFO)
+else: wiz.log("[Trakt Data] Not Enabled", xbmc.LOGINFO)
 
-wiz.log("[Real Debrid Data] Started", xbmc.LOGNOTICE)
+wiz.log("[Real Debrid Data] Started", xbmc.LOGINFO)
 if KEEPREAL == 'true':
 	if REALSAVE <= str(TODAY):
-		wiz.log("[Real Debrid Data] Saving all Data", xbmc.LOGNOTICE)
+		wiz.log("[Real Debrid Data] Saving all Data", xbmc.LOGINFO)
 		debridit.autoUpdate('all')
 		wiz.setS('debridlastsave', str(THREEDAYS))
 	else: 
-		wiz.log("[Real Debrid Data] Next Auto Save isnt until: %s / TODAY is: %s" % (REALSAVE, str(TODAY)), xbmc.LOGNOTICE)
-else: wiz.log("[Real Debrid Data] Not Enabled", xbmc.LOGNOTICE)
+		wiz.log("[Real Debrid Data] Next Auto Save isnt until: %s / TODAY is: %s" % (REALSAVE, str(TODAY)), xbmc.LOGINFO)
+else: wiz.log("[Real Debrid Data] Not Enabled", xbmc.LOGINFO)
 
-wiz.log("[Login Data] Started", xbmc.LOGNOTICE)
+wiz.log("[Login Data] Started", xbmc.LOGINFO)
 if KEEPLOGIN == 'true':
 	if LOGINSAVE <= str(TODAY):
-		wiz.log("[Login Data] Saving all Data", xbmc.LOGNOTICE)
+		wiz.log("[Login Data] Saving all Data", xbmc.LOGINFO)
 		loginit.autoUpdate('all')
 		wiz.setS('loginlastsave', str(THREEDAYS))
 	else: 
-		wiz.log("[Login Data] Next Auto Save isnt until: %s / TODAY is: %s" % (LOGINSAVE, str(TODAY)), xbmc.LOGNOTICE)
-else: wiz.log("[Login Data] Not Enabled", xbmc.LOGNOTICE)
+		wiz.log("[Login Data] Next Auto Save isnt until: %s / TODAY is: %s" % (LOGINSAVE, str(TODAY)), xbmc.LOGINFO)
+else: wiz.log("[Login Data] Not Enabled", xbmc.LOGINFO)
 
 filesize = int(wiz.getS('filesize_alert'))
 filesize_thumb = int(wiz.getS('filesizethumb_alert'))
@@ -454,7 +431,7 @@ total_sizetext = "%.0f" % (total_size/1024000.0)
 	
 if int(total_sizetext) > filesize:
 	wiz.clearPackagesStart(); wiz.refresh()
-	wiz.log("[Auto Cleaner] Package Cleaner Triggered", xbmc.LOGNOTICE)
+	wiz.log("[Auto Cleaner] Package Cleaner Triggered", xbmc.LOGINFO)
 	
 for dirpath2, dirnames2, filenames2 in os.walk(THUMBS):
 	for f2 in filenames2:
@@ -464,11 +441,8 @@ total_sizetext2 = "%.0f" % (total_size2/1024000.0)
 
 if int(total_sizetext2) > filesize_thumb:
 	wiz.clearThumb(); wiz.refresh()
-	wiz.log("[Auto Cleaner] Thumbs Cleaner Triggered", xbmc.LOGNOTICE)
+	wiz.log("[Auto Cleaner] Thumbs Cleaner Triggered", xbmc.LOGINFO)
 
 if wiz.getS('clearcache') == 'true':
 	wiz.clearCache(); wiz.refresh()
-	wiz.log("[Auto Cleaner] Thumbs Cleaner Triggered", xbmc.LOGNOTICE)
-	
-	
-wiz.setS('kodi17iscrap', '')
+	wiz.log("[Auto Cleaner] Thumbs Cleaner Triggered", xbmc.LOGINFO)

@@ -19,12 +19,11 @@
 
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, sys, xbmcvfs, glob
 import shutil
-import urllib2,urllib
+import urllib.request, urllib.error, urllib.parse
 import re
 import uservar
 import time
-try:    from sqlite3 import dbapi2 as database
-except: from pysqlite2 import dbapi2 as database
+from sqlite3 import dbapi2 as database
 from datetime import date, datetime, timedelta
 from resources.libs import wizard as wiz
 
@@ -32,7 +31,7 @@ ADDON_ID       = uservar.ADDON_ID
 ADDONTITLE     = uservar.ADDONTITLE
 ADDON          = wiz.addonId(ADDON_ID)
 DIALOG         = xbmcgui.Dialog()
-HOME           = xbmc.translatePath('special://home/')
+HOME           = xbmcvfs.translatePath('special://home/')
 ADDONS         = os.path.join(HOME,      'addons')
 USERDATA       = os.path.join(HOME,      'userdata')
 PLUGIN         = os.path.join(ADDONS,    ADDON_ID)
@@ -155,7 +154,7 @@ def updateDebrid(do, who):
 				user = addonid.getSetting(default)
 				wiz.setS(saved, user)
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name), '[COLOR %s]Real Debrid Data: Saved![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Real Debrid Data] Unable to Update %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 		else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name), '[COLOR %s]Real Debrid Data: Not Registered![/COLOR]' % COLOR2, 2000, icon)
 	elif do == 'restore':
@@ -169,7 +168,7 @@ def updateDebrid(do, who):
 				user = addonid.getSetting(default)
 				wiz.setS(saved, user)
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name), '[COLOR %s]Real Debrid: Restored![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Real Debrid Data] Unable to Restore %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 		#else: wiz.LogNotify(name,'Real Debrid Data: [COLOR red]Not Found![/COLOR]', 2000, icon)
 	elif do == 'clearaddon':
@@ -186,7 +185,7 @@ def updateDebrid(do, who):
 						else: wiz.log('Removing Line: %s' % line, xbmc.LOGNOTICE)
 				f.close()
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, name),'[COLOR %s]Addon Data: Cleared![/COLOR]' % COLOR2, 2000, icon)
-			except Exception, e:
+			except Exception as e:
 				wiz.log("[Trakt Data] Unable to Clear Addon %s (%s)" % (who, str(e)), xbmc.LOGERROR)
 	wiz.refresh()
 

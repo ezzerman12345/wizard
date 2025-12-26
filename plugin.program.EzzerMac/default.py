@@ -47,16 +47,14 @@
 ############################################################################
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, sys, xbmcvfs, glob
 import shutil
-import urllib2,urllib
+import urllib.request, urllib.error, urllib.parse
 import re
 import zipfile
 import uservar
 import fnmatch
-try:    from sqlite3 import dbapi2 as database
-except: from pysqlite2 import dbapi2 as database
-from datetime import date, datetime, timedelta
-from urlparse import urljoin
-from resources.libs import extract, downloader, notify, debridit, traktit, allucit, loginit, net, skinSwitch, uploadLog, yt, speedtest, wizard as wiz, addonwindow as pyxbmct
+from datetime import date, timedelta
+from urllib.parse import urljoin, parse_qsl
+from resources.libs import extract, downloader, notify, debridit, traktit, loginit, net, skinSwitch, uploadLog, yt, wizard as wiz, addonwindow as pyxbmct
 
 
 ADDON_ID         = uservar.ADDON_ID
@@ -66,10 +64,10 @@ VERSION          = wiz.addonInfo(ADDON_ID,'version')
 ADDONPATH        = wiz.addonInfo(ADDON_ID, 'path')
 DIALOG           = xbmcgui.Dialog()
 DP               = xbmcgui.DialogProgress()
-HOME             = xbmc.translatePath('special://home/')
-LOG              = xbmc.translatePath('special://logpath/')
-PROFILE          = xbmc.translatePath('special://profile/')
-TEMPDIR          = xbmc.translatePath('special://temp')
+HOME             = xbmcvfs.translatePath('special://home/')
+LOG              = xbmcvfs.translatePath('special://logpath/')
+PROFILE          = xbmcvfs.translatePath('special://profile/')
+TEMPDIR          = xbmcvfs.translatePath('special://temp')
 ADDONS           = os.path.join(HOME,      'addons')
 USERDATA         = os.path.join(HOME,      'userdata')
 PLUGIN           = os.path.join(ADDONS,    ADDON_ID)
@@ -97,10 +95,9 @@ DEFAULTIGNORE    = wiz.getS('defaultskinignore')
 BUILDVERSION     = wiz.getS('buildversion')
 BUILDTHEME       = wiz.getS('buildtheme')
 BUILDLATEST      = wiz.getS('latestversion')
-SHOW15           = wiz.getS('show15')
-SHOW16           = wiz.getS('show16')
-SHOW17           = wiz.getS('show17')
-SHOW18           = wiz.getS('show18')
+SHOW19           = wiz.getS('show19')
+SHOW20           = wiz.getS('show20')
+SHOW21           = wiz.getS('show21')
 SHOWADULT        = wiz.getS('adult')
 SHOWMAINT        = wiz.getS('showmaint')
 AUTOCLEANUP      = wiz.getS('autoclean')
@@ -111,21 +108,12 @@ AUTOFEQ          = wiz.getS('autocleanfeq')
 AUTONEXTRUN      = wiz.getS('nextautocleanup')
 INCLUDEVIDEO     = wiz.getS('includevideo')
 INCLUDEALL       = wiz.getS('includeall')
-INCLUDEBOB       = wiz.getS('includebob')
-INCLUDEPHOENIX   = wiz.getS('includephoenix')
-INCLUDESPECTO    = wiz.getS('includespecto')
-INCLUDEGENESIS   = wiz.getS('includegenesis')
-INCLUDEEXODUS    = wiz.getS('includeexodus')
-INCLUDEONECHAN   = wiz.getS('includeonechan')
-INCLUDESALTS     = wiz.getS('includesalts')
-INCLUDESALTSHD   = wiz.getS('includesaltslite')
 SEPERATE         = wiz.getS('seperate')
 NOTIFY           = wiz.getS('notify')
 NOTEID           = wiz.getS('noteid')
 NOTEDISMISS      = wiz.getS('notedismiss')
 TRAKTSAVE        = wiz.getS('traktlastsave')
 REALSAVE         = wiz.getS('debridlastsave')
-ALLUCSAVE        = wiz.getS('alluclastsave')
 LOGINSAVE        = wiz.getS('loginlastsave')
 KEEPFAVS         = wiz.getS('keepfavourites')
 FAVSsave         = wiz.getS('favouriteslastsave')
@@ -137,16 +125,8 @@ KEEPSUPER        = wiz.getS('keepsuper')
 KEEPWHITELIST    = wiz.getS('keepwhitelist')
 KEEPTRAKT        = wiz.getS('keeptrakt')
 KEEPREAL         = wiz.getS('keepdebrid')
-KEEPALLUC        = wiz.getS('keepalluc')
 KEEPLOGIN        = wiz.getS('keeplogin')
 DEVELOPER        = wiz.getS('developer')
-THIRDPARTY       = wiz.getS('enable3rd')
-THIRD1NAME       = wiz.getS('wizard1name')
-THIRD1URL        = wiz.getS('wizard1url')
-THIRD2NAME       = wiz.getS('wizard2name')
-THIRD2URL        = wiz.getS('wizard2url')
-THIRD3NAME       = wiz.getS('wizard3name')
-THIRD3URL        = wiz.getS('wizard3url')
 BACKUPLOCATION   = ADDON.getSetting('path') if not ADDON.getSetting('path') == '' else 'special://home/'
 BACKUPROMS       = wiz.getS('rompath')
 MYBUILDS         = os.path.join(BACKUPLOCATION, 'My_Builds', '')
@@ -155,10 +135,6 @@ TODAY            = date.today()
 TOMORROW         = TODAY + timedelta(days=1)
 THREEDAYS        = TODAY + timedelta(days=3)
 KODIV          = float(xbmc.getInfoLabel("System.BuildVersion")[:4])
-if KODIV > 17:
-	from resources.libs import zfile as zipfile #FTG mod for Kodi 18
-else:
-	import zipfile
 MCNAME           = wiz.mediaCenter()
 EXCLUDES         = uservar.EXCLUDES
 CACHETEXT        = uservar.CACHETEXT
@@ -202,14 +178,13 @@ ICONREAL         = uservar.ICONREAL if not uservar.ICONREAL == 'http://' else IC
 ICONLOGIN        = uservar.ICONLOGIN if not uservar.ICONLOGIN == 'http://' else ICON
 ICONCONTACT      = uservar.ICONCONTACT if not uservar.ICONCONTACT == 'http://' else ICON
 ICONSETTINGS     = uservar.ICONSETTINGS if not uservar.ICONSETTINGS == 'http://' else ICON
-Images           = xbmc.translatePath(os.path.join('special://home','addons',ADDON_ID,'resources','images/'));
+Images           = xbmcvfs.translatePath(os.path.join('special://home','addons',ADDON_ID,'resources','images/'))
 LOGFILES         = wiz.LOGFILES
 TRAKTID          = traktit.TRAKTID
 DEBRIDID         = debridit.DEBRIDID
 LOGINID          = loginit.LOGINID
-ALLUCID          = allucit.ALLUCID
-MODURL           = 'http://tribeca.tvaddons.ag/tools/maintenance/modules/'
-MODURL2          = 'http://mirrors.kodi.tv/addons/jarvis/'
+MODURL           = 'https://mirrors.kodi.tv/addons/nexus/'
+MODURL2          = 'https://mirrors.kodi.tv/addons/nexus/'
 INSTALLMETHODS   = ['Always Ask', 'Reload Profile', 'Force Close']
 DEFAULTPLUGINS   = ['metadata.album.universal', 'metadata.artists.universal', 'metadata.common.fanart.tv', 'metadata.common.imdb.com', 'metadata.common.musicbrainz.org', 'metadata.themoviedb.org', 'metadata.tvdb.com', 'service.xbmc.versioncheck']
 #FTG MOD##
@@ -273,14 +248,19 @@ def index():
 	if DEVELOPER == 'true': addDir('Developer Menu', 'developer', icon=ICON, themeit=THEME1)
 	setView('files', 'viewType')
 def KodiVer():
-	if KODIV >= 16.0 and KODIV <= 16.9:vername = 'Jarvis'
-	elif KODIV >= 17.0 and KODIV <= 17.9:vername = 'Krypton'
-	elif KODIV >= 18.0 and KODIV <= 18.9:vername = 'Leia'
-	else: vername = "Unknown"
+	if KODIV >= 19.0 and KODIV <= 19.9:
+		vername = 'Matrix'
+	elif KODIV >= 20.0 and KODIV <= 20.9:
+		vername = 'Nexus'
+	elif KODIV >= 21.0 and KODIV <= 21.9:
+		vername = 'Omega'
+	else:
+		vername = "Unknown"
 	return vername
+
 def buildMenu():
 	kodi_ver = KodiVer()
-	bf = wiz.textCache(BUILDFILE)
+	bf = wiz.textCache(BUILDFILE).decode('utf-8')
 	if bf == False:
 		WORKINGURL = wiz.workingURL(BUILDFILE)
 		addFile('%s Version: %s' % (MCNAME, KODIV), '', icon=ICONBUILDS, themeit=THEME3)
@@ -289,28 +269,11 @@ def buildMenu():
 		addFile('Url for txt file not valid', '', icon=ICONBUILDS, themeit=THEME3)
 		addFile('%s' % WORKINGURL, '', icon=ICONBUILDS, themeit=THEME3)
 		return
-	total, count15, count16, count17, count18, adultcount, hidden = wiz.buildCount()
-	third = False; addin = []
-	if THIRDPARTY == 'true':
-		if not THIRD1NAME == '' and not THIRD1URL == '': third = True; addin.append('1')
-		if not THIRD2NAME == '' and not THIRD2URL == '': third = True; addin.append('2')
-		if not THIRD3NAME == '' and not THIRD3URL == '': third = True; addin.append('3')
-	link  = bf.replace('\n','').replace('\r','').replace('\t','').replace('gui=""', 'gui="http://"').replace('theme=""', 'theme="http://"').replace('adult=""', 'adult="no"').replace('url2=""', 'url2="http://"').replace('url3=""', 'url3="http://"').replace('preview=""', 'preview="http://"')
-	match = re.compile('name="(.+?)".+?ersion="(.+?)".+?rl="(.+?)".+?rl2="(.+?)".+?rl3="(.+?)".+?ui="(.+?)".+?odi="(.+?)".+?heme="(.+?)".+?con="(.+?)".+?anart="(.+?)".+?dult="(.+?)".+?escription="(.+?)".+?review="(.+?)"').findall(link)
-	if total == 1 and third == False:
-		for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
-			if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
-			if not DEVELOPER == 'true' and wiz.strTest(name): continue
-			viewBuild(match[0][0])
-			return
+	total, count19, count20, count21,  adultcount, hidden = wiz.buildCount()
 	addFile('%s Version: %s' % (MCNAME, KODIV), '', icon=ICONBUILDS, themeit=THEME3)
 	addDir ('Save Data Menu'       ,'savedata', icon=ICONSAVE,     themeit=THEME3)
 	addDir ('[COLOR yellow]---[B][COLOR lime]Addon Packs [COLOR blue]/ [COLOR red]Fixes[/COLOR][/B][COLOR yellow]---[/COLOR]'        ,'viewpack',   icon=ICONMAINT,   themeit=THEME1)
 	if HIDESPACERS == 'No': addFile(wiz.sep(), '', themeit=THEME3)
-	if third == True:
-		for item in addin:
-			name = eval('THIRD%sNAME' % item)
-			addDir ("[B]%s[/B]" % name, 'viewthirdparty', item, icon=ICONBUILDS, themeit=THEME3)
 	if len(match) >= 1:
 		if SEPERATE == 'true':
 			for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
@@ -319,80 +282,49 @@ def buildMenu():
 				menu = createMenu('install', '', name)
 				addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
 		elif DEVELOPER == 'true':
-			if count15 > 0:
-				addFile('[B]Test builds[/B]', 'togglesetting',  'show15', themeit=THEME3)
-				for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
-					if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
-					if not DEVELOPER == 'true' and wiz.strTest(name): continue
-					kodiv = int(float(kodi))
-					if kodiv <= 15:
-						menu = createMenu('install', '', name)
-						addDir(' %s (v%s)' % (name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
-			if count18 > 0:
-				state = '+' if SHOW18 == 'false' else '-'
-				addFile('[B]%s Leia Builds(%s)[/B]' % (state, count18), 'togglesetting',  'show18', themeit=THEME3)
-				if SHOW18 == 'true':
+			if count20 > 0:
+				state = '+' if SHOW20 == 'false' else '-'
+				addFile('[B]%s Nexus Builds(%s)[/B]' % (state, count20), 'togglesetting',  'show20', themeit=THEME3)
+				if SHOW20 == 'true':
 					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
 						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
 						if not DEVELOPER == 'true' and wiz.strTest(name): continue
 						kodiv = int(float(kodi))
-						if kodiv == 18:
+						if kodiv == 20:
 							menu = createMenu('install', '', name)
 							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
-			if count17 > 0:
-				state = '+' if SHOW17 == 'false' else '-'
-				addFile('[B]%s Krypton Builds(%s)[/B]' % (state, count17), 'togglesetting',  'show17', themeit=THEME3)
-				if SHOW17 == 'true':
+			if count19 > 0:
+				state = '+' if SHOW19 == 'false' else '-'
+				addFile('[B]%s Matrix Builds(%s)[/B]' % (state, count19), 'togglesetting',  'show19', themeit=THEME3)
+				if SHOW19 == 'true':
 					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
 						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
 						if not DEVELOPER == 'true' and wiz.strTest(name): continue
 						kodiv = int(float(kodi))
-						if kodiv == 17:
-							menu = createMenu('install', '', name)
-							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
-			if count16 > 0:
-				state = '+' if SHOW16 == 'false' else '-'
-				addFile('[B]%s Jarvis Builds(%s)[/B]' % (state, count16), 'togglesetting',  'show16', themeit=THEME3)
-				if SHOW16 == 'true':
-					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
-						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
-						if not DEVELOPER == 'true' and wiz.strTest(name): continue
-						kodiv = int(float(kodi))
-						if kodiv == 16:
+						if kodiv == 19:
 							menu = createMenu('install', '', name)
 							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
 		else:
-			if kodi_ver == "Leia":
-				state = '+' if SHOW18 == 'false' else '-'
-				addFile('[B]%s Leia Builds(%s)[/B]' % (state, count18), 'togglesetting',  'show18', themeit=THEME3)
-				if SHOW18 == 'true':
+			if kodi_ver == "Nexus":
+				state = '+' if SHOW20 == 'false' else '-'
+				addFile('[B]%s Nexus Builds(%s)[/B]' % (state, count20), 'togglesetting',  'show20', themeit=THEME3)
+				if SHOW20 == 'true':
 					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
 						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
 						if not DEVELOPER == 'true' and wiz.strTest(name): continue
 						kodiv = int(float(kodi))
-						if kodiv == 18:
+						if kodiv == 20:
 							menu = createMenu('install', '', name)
 							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
-			elif kodi_ver == "Krypton":
-				state = '+' if SHOW17 == 'false' else '-'
-				addFile('[B]%s Krypton Builds(%s)[/B]' % (state, count17), 'togglesetting',  'show17', themeit=THEME3)
-				if SHOW17 == 'true':
+			elif kodi_ver == "Matrix":
+				state = '+' if SHOW19 == 'false' else '-'
+				addFile('[B]%s Matrix Builds(%s)[/B]' % (state, count19), 'togglesetting',  'show19', themeit=THEME3)
+				if SHOW19 == 'true':
 					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
 						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
 						if not DEVELOPER == 'true' and wiz.strTest(name): continue
 						kodiv = int(float(kodi))
-						if kodiv == 17:
-							menu = createMenu('install', '', name)
-							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
-			elif kodi_ver == "Jarvis":
-				state = '+' if SHOW16 == 'false' else '-'
-				addFile('[B]%s Jarvis Builds(%s)[/B]' % (state, count16), 'togglesetting',  'show16', themeit=THEME3)
-				if SHOW16 == 'true':
-					for name, version, url, url2, url3, gui, kodi, theme, icon, fanart, adult, description, preview in match:
-						if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
-						if not DEVELOPER == 'true' and wiz.strTest(name): continue
-						kodiv = int(float(kodi))
-						if kodiv == 16:
+						if kodiv == 19:
 							menu = createMenu('install', '', name)
 							addDir('[%s] %s (v%s)' % (float(kodi), name, version), 'viewbuild', name, description=description, fanart=fanart,icon=icon, menu=menu, themeit=THEME2)
 	elif hidden > 0: 
@@ -449,31 +381,7 @@ def viewBuild(name):
 					themefanart = themefanart if themefanart == 'http://' else fanart
 					addFile(themename if not themename == BUILDTHEME else "[B]%s (Installed)[/B]" % themename, 'theme', name, themename, description=description, fanart=themefanart, icon=themeicon, themeit=THEME3)
 	setView('files', 'viewType')
-def viewThirdList(number):
-	name = eval('THIRD%sNAME' % number)
-	url  = eval('THIRD%sURL' % number)
-	work = wiz.workingURL(url)
-	if not work == True:
-		addFile('Url for txt file not valid', '', icon=ICONBUILDS, themeit=THEME3)
-		addFile('%s' % WORKINGURL, '', icon=ICONBUILDS, themeit=THEME3)
-	else:
-		type, buildslist = wiz.thirdParty(url)
-		addFile("[B]%s[/B]" % name, '', themeit=THEME3)
-		if HIDESPACERS == 'No': addFile(wiz.sep(), '', themeit=THEME3)
-		if type:
-			for name, version, url, kodi, icon, fanart, adult, description in buildslist:
-				if not SHOWADULT == 'true' and adult.lower() == 'yes': continue
-				addFile("[%s] %s v%s" % (kodi, name, version), 'installthird', name, url, icon=icon, fanart=fanart, description=description, themeit=THEME2)
-		else:
-			for name, url, icon, fanart, description in buildslist:
-				addFile(name, 'installthird', name, url, icon=icon, fanart=fanart, description=description, themeit=THEME2)
-def editThirdParty(number):
-	name  = eval('THIRD%sNAME' % number)
-	url   = eval('THIRD%sURL' % number)
-	name2 = wiz.getKeyboard(name, 'Enter the Name of the Wizard')
-	url2  = wiz.getKeyboard(url, 'Enter the URL of the Wizard Text')
-	wiz.setS('wizard%sname' % number, name2)
-	wiz.setS('wizard%surl' % number, url2)
+
 def apkScraper(name=""):
 	if name == 'kodi':
 		kodiurl1 = 'http://mirrors.kodi.tv/releases/android/arm/'
@@ -537,7 +445,7 @@ def apkScraper(name=""):
 				download = tempurl
 				addFile(title, 'apkinstall', name, download)
 				x += 1
-			except Exception, e:
+			except Exception as e:
 				wiz.log("Error on: %s / %s" % (name, str(e)))
 		if x == 0: addFile("Error SPMC Scraper Is Currently Down.")
 def apkMenu(name=None, url=None):
@@ -672,9 +580,9 @@ def emumenu():
 			for name, url, icon, fanart in match:
 				addFile(name, 'apkinstall', name, url, icon=icon, fanart=fanart, themeit=THEME1)
 		elif wiz.platform() == 'windows':
-			DIALOG.ok(ADDONTITLE, "[COLOR yellow]Please go download RetroArch for PC[/COLOR]", " Goto http://tinyurl.com/RetroFTG for a full tutorial")
+			DIALOG.ok(ADDONTITLE, "[COLOR yellow]Please go download RetroArch for PC[/COLOR]\nGoto http://tinyurl.com/RetroFTG for a full tutorial")
 		elif wiz.platform() == 'linux':
-			DIALOG.ok(ADDONTITLE, "[COLOR yellow]Please go download RetroArch for PC[/COLOR]", " Goto http://tinyurl.com/RetroFTG for a full tutorial")
+			DIALOG.ok(ADDONTITLE, "[COLOR yellow]Please go download RetroArch for PC[/COLOR]\nGoto http://tinyurl.com/RetroFTG for a full tutorial")
 def rompackmenu():
 	link = wiz.openURL(ROMPACK).replace('\n','').replace('\r','').replace('\t','')
 	match = re.compile('name="(.+?)".+?rl="(.+?)".+?con="(.+?)".+?anart="(.+?)"').findall(link)
@@ -682,18 +590,18 @@ def rompackmenu():
 		for name, url, icon, fanart in match:
 			addFile(name, 'UNZIPROM', name, url, icon=icon, fanart=fanart, themeit=THEME1)
 def UNZIPROM():
-	myroms = xbmc.translatePath(BACKUPROMS)
+	myroms = xbmcvfs.translatePath(BACKUPROMS)
 	if myroms == '':
-		if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that you do not have an extract location setup for Rom Packs" % COLOR2, "Would you like to set one?[/COLOR]", yeslabel="[COLOR green][B]Set Location[/B][/COLOR]", nolabel="[COLOR red][B]Cancel Download[/B][/COLOR]"):
+		if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that you do not have an extract location setup for Rom Packs" % COLOR2 + "\nWould you like to set one?[/COLOR]", yeslabel="[COLOR green][B]Set Location[/B][/COLOR]", nolabel="[COLOR red][B]Cancel Download[/B][/COLOR]"):
 			wiz.openS('rompath')
 			myroms = wiz.getS('rompath')
 			if myroms == '': return
-	yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Are you sure you would like to download and extract [COLOR %s]%s[/COLOR] to:" % (COLOR2, COLOR1, name), "[COLOR %s]%s[/COLOR]" % (COLOR1, myroms), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
+	yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Are you sure you would like to download and extract [COLOR %s]%s[/COLOR] to:" % (COLOR2, COLOR1, name) + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, myroms), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
 	if not yes: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]ERROR: Install Cancelled[/COLOR]' % COLOR2); return
 	display = name
 	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
 	if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Rom Installer: Invalid Rom Url![/COLOR]' % COLOR2); return
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display),'', 'Please Wait')
+	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display) + '\nPlease Wait')
 	lib=os.path.join(PACKAGES, "%s.zip" % name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', ''))
 	try: os.remove(lib)
 	except: pass
@@ -715,7 +623,7 @@ def buildVideo(name):
 		wiz.FTGlog('URL %s'%videofile)
 		if videofile and not videofile == 'http://': playVideoB(videofile)
 		else: wiz.log("[%s]Unable to find url for video preview" % name)
-	else: wiz.log("Build text file not working: %s" % WORKINGURL)
+	else: wiz.log("Build text file not working: %s" % BUILDFILE)
 
 
 def playVideo(url):
@@ -771,7 +679,7 @@ def addonMenu(name=None, url=None):
 							pass
 						addonInstaller(plugin, url)
 					if x < 1:
-						wiz.LogNotify("[COLOR %s]No Addons[/COLOR]" % COLOR1)
+						wiz.LogNotify("[COLOR %s]No Addons[/COLOR]" % COLOR1,'')
 			else: 
 				addFile('Text File not formated correctly!', '', themeit=THEME3)
 				wiz.log("[Addon Menu] ERROR: Invalid Format.")
@@ -786,14 +694,14 @@ def addonMenu(name=None, url=None):
 def packInstaller(name, url):
 	if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]Addon Installer[/COLOR]" % COLOR1, '[COLOR %s]%s:[/COLOR] [COLOR %s]Invalid Zip Url![/COLOR]' % (COLOR1, name, COLOR2)); return
 	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name), '', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name) + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	urlsplits = url.split('/')
-	lib = xbmc.makeLegalFilename(os.path.join(PACKAGES, urlsplits[-1]))
+	lib = xbmcvfs.makeLegalFilename(os.path.join(PACKAGES, urlsplits[-1]))
 	try: os.remove(lib)
 	except: pass
 	downloader.download(url, lib, DP)
 	title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-	DP.update(0, title,'', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.update(0, title + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	percent, errors, error = extract.all(lib,ADDONS,DP, title=title)
 	installed = grabAddons(lib)
 	if KODIV >= 17: wiz.addonDatabase(installed, 1, True)
@@ -805,14 +713,14 @@ def packInstaller(name, url):
 def skinInstaller(name, url):
 	if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]Addon Installer[/COLOR]" % COLOR1, '[COLOR %s]%s:[/COLOR] [COLOR %s]Invalid Zip Url![/COLOR]' % (COLOR1, name, COLOR2)); return
 	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name), '', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name) + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	urlsplits = url.split('/')
-	lib = xbmc.makeLegalFilename(os.path.join(PACKAGES, urlsplits[-1]))
+	lib = xbmcvfs.makeLegalFilename(os.path.join(PACKAGES, urlsplits[-1]))
 	try: os.remove(lib)
 	except: pass
 	downloader.download(url, lib, DP)
 	title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-	DP.update(0, title,'', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.update(0, title + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	percent, errors, error = extract.all(lib,HOME,DP, title=title)
 	installed = grabAddons(lib)
 	if KODIV >= 17: wiz.addonDatabase(installed, 1, True)
@@ -845,7 +753,7 @@ def addonInstaller(plugin, url):
 							wiz.cleanHouse(os.path.join(ADDONS, plugin))
 							try: wiz.removeFolder(os.path.join(ADDONS, plugin))
 							except: pass
-							if DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to remove the addon_data for:" % COLOR2, "[COLOR %s]%s[/COLOR]?[/COLOR]" % (COLOR1, plugin), yeslabel="[B][COLOR green]Yes Remove[/COLOR][/B]", nolabel="[B][COLOR red]No Skip[/COLOR][/B]"):
+							if DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to remove the addon_data for:" % COLOR2 + "\n[COLOR %s]%s[/COLOR]?[/COLOR]" % (COLOR1, plugin), yeslabel="[B][COLOR green]Yes Remove[/COLOR][/B]", nolabel="[B][COLOR red]No Skip[/COLOR][/B]"):
 								removeAddonData(plugin)
 							wiz.refresh()
 							return True
@@ -854,7 +762,7 @@ def addonInstaller(plugin, url):
 					repo = os.path.join(ADDONS, repository)
 					if not repository.lower() == 'none' and not os.path.exists(repo):
 						wiz.log("Repository not installed, installing it")
-						if DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to install the repository for [COLOR %s]%s[/COLOR]:" % (COLOR2, COLOR1, plugin), "[COLOR %s]%s[/COLOR]?[/COLOR]" % (COLOR1, repository), yeslabel="[B][COLOR green]Yes Install[/COLOR][/B]", nolabel="[B][COLOR red]No Skip[/COLOR][/B]"): 
+						if DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to install the repository for [COLOR %s]%s[/COLOR]:" % (COLOR2, COLOR1, plugin) + "\n[COLOR %s]%s[/COLOR]?[/COLOR]" % (COLOR1, repository), yeslabel="[B][COLOR green]Yes Install[/COLOR][/B]", nolabel="[B][COLOR red]No Skip[/COLOR][/B]"): 
 							ver = wiz.parseDOM(wiz.openURL(repositoryxml), 'addon', ret='version', attrs = {'id': repository})
 							if len(ver) > 0:
 								repozip = '%s%s-%s.zip' % (repositoryurl, repository, ver[0])
@@ -914,16 +822,16 @@ def installFromKodi(plugin, over=True):
 def installAddon(name, url):
 	if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]Addon Installer[/COLOR]" % COLOR1, '[COLOR %s]%s:[/COLOR] [COLOR %s]Invalid Zip Url![/COLOR]' % (COLOR1, name, COLOR2)); return
 	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name), '', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name) + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	urlsplits = url.split('/')
 	lib=os.path.join(PACKAGES, urlsplits[-1])
 	try: os.remove(lib)
 	except: pass
 	downloader.download(url, lib, DP)
 	title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-	DP.update(0, title,'', '[COLOR %s]Please Wait[/COLOR]' % COLOR2)
+	DP.update(0, title + '\n[COLOR %s]Please Wait[/COLOR]' % COLOR2)
 	percent, errors, error = extract.all(lib,ADDONS,DP, title=title)
-	DP.update(0, title,'', '[COLOR %s]Installing Dependencies[/COLOR]' % COLOR2)
+	DP.update(0, title + '\n[COLOR %s]Installing Dependencies[/COLOR]' % COLOR2)
 	installed(name)
 	installlist = grabAddons(lib)
 	wiz.log(str(installlist))
@@ -940,7 +848,7 @@ def installAddon(name, url):
 def installDep(name, DP=None):
 	dep=os.path.join(ADDONS,name,'addon.xml')
 	if os.path.exists(dep):
-		source = open(dep,mode='r'); link = source.read(); source.close(); 
+		source = open(dep,mode='r', encoding='utf-8'); link = source.read(); source.close(); 
 		match  = wiz.parseDOM(link, 'import', ret='addon')
 		for depends in match:
 			if not 'xbmc.python' in depends:
@@ -956,7 +864,7 @@ def installed(addon):
 	url = os.path.join(ADDONS,addon,'addon.xml')
 	if os.path.exists(url):
 		try:
-			list  = open(url,mode='r'); g = list.read(); list.close()
+			list  = open(url,mode='r', encoding='utf-8'); g = list.read(); list.close()
 			name = wiz.parseDOM(g, 'addon', ret='name', attrs = {'id': addon})
 			icon  = os.path.join(ADDONS,addon,'icon.png')
 			wiz.LogNotify('[COLOR %s]%s[/COLOR]' % (COLOR1, name[0]), '[COLOR %s]Addon Enabled[/COLOR]' % COLOR2, '2000', icon)
@@ -1038,7 +946,6 @@ def misc():
 		err = str(errors)
 		errorsfound = '[COLOR red]%s[/COLOR] Error(s) Found'  % (err) if errors > 0 else 'None Found'
 		wizlogsize = ': [COLOR red]Not Found[/COLOR]' if not os.path.exists(WIZLOG) else ": [COLOR green]%s[/COLOR]" % wiz.convertSize(os.path.getsize(WIZLOG))
-		addFile('Kodi 17 Fix',                    'kodi17fix',       icon=ICONMAINT, themeit=THEME3)
 		addDir ('Speed Test',                     'speedtest',       icon=ICONMAINT, themeit=THEME3)
 		addFile('Enable Unknown Sources',         'unknownsources',  icon=ICONMAINT, themeit=THEME3)
 		addFile('Reload Skin',                    'forceskin',       icon=ICONMAINT, themeit=THEME3)
@@ -1068,21 +975,12 @@ def tweaks():
 	maint       = 'true' if SHOWMAINT      == 'true' else 'false'
 	includevid  = 'true' if INCLUDEVIDEO   == 'true' else 'false'
 	includeall  = 'true' if INCLUDEALL     == 'true' else 'false'
-	thirdparty  = 'true' if THIRDPARTY     == 'true' else 'false'
 	addDir ('System Information',             'systeminfo',      icon=ICONMAINT, themeit=THEME1)
 	addFile('Scan Sources for broken links',  'checksources',    icon=ICONMAINT, themeit=THEME3)
 	addFile('Scan For Broken Repositories',   'checkrepos',      icon=ICONMAINT, themeit=THEME3)
 	addFile('Fix Addons Not Updating',        'fixaddonupdate',  icon=ICONMAINT, themeit=THEME3)
 	addFile('Remove Non-Ascii filenames',     'asciicheck',      icon=ICONMAINT, themeit=THEME3)
 	addFile('Convert Paths to special',       'convertpath',     icon=ICONMAINT, themeit=THEME3)
-	addFile('Third Party Wizards: %s' % thirdparty.replace('true',on).replace('false',off) ,'togglesetting', 'enable3rd', fanart=FANART, icon=ICONMAINT, themeit=THEME1)
-	if thirdparty == 'true':
-		first = THIRD1NAME if not THIRD1NAME == '' else 'Not Set'
-		secon = THIRD2NAME if not THIRD2NAME == '' else 'Not Set'
-		third = THIRD3NAME if not THIRD3NAME == '' else 'Not Set'
-		addFile('Edit Third Party Wizard 1: [COLOR %s]%s[/COLOR]' % (COLOR2, first), 'editthird', '1', icon=ICONMAINT, themeit=THEME3)
-		addFile('Edit Third Party Wizard 2: [COLOR %s]%s[/COLOR]' % (COLOR2, secon), 'editthird', '2', icon=ICONMAINT, themeit=THEME3)
-		addFile('Edit Third Party Wizard 3: [COLOR %s]%s[/COLOR]' % (COLOR2, third), 'editthird', '3', icon=ICONMAINT, themeit=THEME3)
 def net_tools(view=None):
 	addDir ('Speed Tester' ,'speedtest', icon=ICONAPK, themeit=THEME1)
 	if HIDESPACERS == 'No': addFile(wiz.sep(), '', themeit=THEME3)
@@ -1108,18 +1006,6 @@ def viewIP():
 	addFile('[COLOR %s]Provider:[/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR1, COLOR2, provider), '', icon=ICONMAINT, themeit=THEME2)
 	addFile('[COLOR %s]Location:[/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR1, COLOR2, location), '', icon=ICONMAINT, themeit=THEME2)
 	addFile('[COLOR %s]MacAddress:[/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR1, COLOR2, data[1]), '', icon=ICONMAINT, themeit=THEME2)
-def speedTest():
-	addFile('Run Speed Test',             'speed',      icon=ICONMAINT, themeit=THEME3)
-	if os.path.exists(SPEEDTESTFOLD):
-		speedimg = glob.glob(os.path.join(SPEEDTESTFOLD, '*.png'))
-		speedimg.sort(key=lambda f: os.path.getmtime(f), reverse=True)
-		if len(speedimg) > 0:
-			addFile('Clear Results',          'clearspeedtest',    icon=ICONMAINT, themeit=THEME3)
-			addFile(wiz.sep('Previous Runs'), '', icon=ICONMAINT, themeit=THEME3)
-			for item in speedimg:
-				created = datetime.fromtimestamp(os.path.getmtime(item)).strftime('%m/%d/%Y %H:%M:%S')
-				img = item.replace(os.path.join(SPEEDTESTFOLD, ''), '')
-				addFile('[B]%s[/B]: [I]Ran %s[/I]' % (img, created), 'viewspeedtest', img, icon=ICONMAINT, themeit=THEME3)
 def clearSpeedTest():
 	speedimg = glob.glob(os.path.join(SPEEDTESTFOLD, '*.png'))
 	for file in speedimg:
@@ -1127,17 +1013,37 @@ def clearSpeedTest():
 def viewSpeedTest(img=None):
 	img = os.path.join(SPEEDTESTFOLD, img)
 	notify.speedTest(img)
+
 def speed():
-	try:
-		found = speedtest.speedtest()
-		if not os.path.exists(SPEEDTESTFOLD): os.makedirs(SPEEDTESTFOLD)
-		urlsplits = found[0].split('/')
-		dest = os.path.join(SPEEDTESTFOLD, urlsplits[-1])
-		urllib.urlretrieve(found[0], dest)
-		viewSpeedTest(urlsplits[-1])
-	except:
-		wiz.log("[Speed Test] Error Running Speed Test")
-		pass
+    try:
+        from resources.libs import speedtest  # Import here, only when needed
+
+        # Show the spinning busy dialog
+        xbmc.executebuiltin('ActivateWindow(busydialog)')
+
+        # Run the speedtest
+        found = speedtest.speedtest()
+        if not os.path.exists(SPEEDTESTFOLD):
+            os.makedirs(SPEEDTESTFOLD)
+        urlsplits = found[0].split('/')
+        dest = os.path.join(SPEEDTESTFOLD, urlsplits[-1])
+        urllib.request.urlretrieve(found[0], dest)
+
+        # Hide the busy dialog
+        xbmc.executebuiltin('Dialog.Close(busydialog)')
+
+        # Show the result image
+        viewSpeedTest(urlsplits[-1])
+
+        # Wait a few seconds, then restore speedtest.jpg
+        time.sleep(5)
+        notify.speedTest(os.path.join(ART, 'speedtest.jpg'))
+
+    except Exception as e:
+        xbmc.executebuiltin('Dialog.Close(busydialog)')
+        wiz.log(f"[Speed Test] Error Running Speed Test: {e}")
+        notify.speedTest(os.path.join(ART, 'speedtest.jpg'))
+
 def advancedWindow(url=None):
 	if not ADVANCEDFILE == 'http://':
 		if url == None:
@@ -1171,16 +1077,16 @@ def writeAdvanced(name, url):
 		else: choice = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to download and install [COLOR %s]%s[/COLOR]?[/COLOR]" % (COLOR2, COLOR1, name), yeslabel="[B][COLOR green]Install[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
 		if choice == 1:
 			file = wiz.openURL(url)
-			f = open(ADVANCED, 'w'); 
+			f = open(ADVANCED, 'w', encoding='utf-8'); 
 			f.write(file)
 			f.close()
-			DIALOG.ok(ADDONTITLE, '[COLOR %s]AdvancedSettings.xml file has been successfully written.  Once you click okay it will force close kodi.[/COLOR]' % COLOR2)
+			DIALOG.ok(ADDONTITLE, '[COLOR %s]AdvancedSettings.xml file has been successfully written.\nOnce you click okay it will force close kodi.[/COLOR]' % COLOR2)
 			wiz.killxbmc(True)
 		else: wiz.log("[Advanced Settings] install canceled"); wiz.LogNotify('[COLOR %s]%s[/COLOR]' % (COLOR1, ADDONTITLE), "[COLOR %s]Write Cancelled![/COLOR]" % COLOR2); return
 	else: wiz.log("[Advanced Settings] URL not working: %s" % ADVANCEDWORKING); wiz.LogNotify('[COLOR %s]%s[/COLOR]' % (COLOR1, ADDONTITLE), "[COLOR %s]URL Not Working[/COLOR]" % COLOR2)
 def viewAdvanced():
 	if os.path.exists(ADVANCED):
-		f = open(ADVANCED)
+		f = open(ADVANCED, encoding='utf-8')
 		a = f.read().replace('\t', '    ')
 		wiz.TextBox(ADDONTITLE, a)
 		f.close()
@@ -1190,7 +1096,7 @@ def removeAdvanced():
 		wiz.removeFile(ADVANCED)
 	else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]AdvancedSettings.xml not found[/COLOR]")
 def showAutoAdvanced():
-	notify.autoConfig2()
+	notify.simple_advanced()
 def showAutoAdvanced1():
 	notify.autoConfig()
 def getIP():
@@ -1236,7 +1142,7 @@ def systemInfo():
 		if foldername == 'packages': continue
 		xml = os.path.join(folder, 'addon.xml')
 		if os.path.exists(xml):
-			f      = open(xml)
+			f      = open(xml, encoding='utf-8')
 			a      = f.read()
 			prov   = re.compile("<provides>(.+?)</provides>").findall(a)
 			if len(prov) == 0:
@@ -1282,7 +1188,6 @@ def systemInfo():
 def saveMenu():
 	on = '[COLOR green]ON[/COLOR]'; off = '[COLOR red]OFF[/COLOR]'
 	trakt      = 'true' if KEEPTRAKT     == 'true' else 'false'
-	alluc      = 'true' if KEEPALLUC     == 'true' else 'false'
 	real       = 'true' if KEEPREAL      == 'true' else 'false'
 	login      = 'true' if KEEPLOGIN     == 'true' else 'false'
 	sources    = 'true' if KEEPSOURCES   == 'true' else 'false'
@@ -1302,14 +1207,12 @@ def saveMenu():
 	addDir ('Keep Favourites'              ,'FavsMenu',    icon=ICONREAL, themeit=THEME1)
 	addDir ('Keep Trakt Data',               'trakt',                icon=ICONTRAKT, themeit=THEME1)
 	addDir ('Keep Real Debrid',              'realdebrid',           icon=ICONREAL,  themeit=THEME1)
-	addDir ('Keep Alluc Login',              'alluc',                icon=ICONLOGIN, themeit=THEME1)
 	addDir ('Keep Login Info',               'login',                icon=ICONLOGIN, themeit=THEME1)
 	addFile('Import Save Data',              'managedata', 'import', icon=ICONSAVE,  themeit=THEME1)
 	addFile('Export Save Data',              'managedata', 'export', icon=ICONSAVE,  themeit=THEME1)
 	addFile('- Click to toggle settings -', '', themeit=THEME3)
 	addFile('Save Trakt: %s' % trakt.replace('true',on).replace('false',off)                       ,'togglesetting', 'keeptrakt',      icon=ICONTRAKT, themeit=THEME1)
 	addFile('Save Real Debrid: %s' % real.replace('true',on).replace('false',off)                  ,'togglesetting', 'keepdebrid',     icon=ICONREAL,  themeit=THEME1)
-	addFile('Save Alluc Login: %s' % alluc.replace('true',on).replace('false',off)                 ,'togglesetting', 'keepalluc',      icon=ICONREAL,  themeit=THEME1)
 	addFile('Save Login Info: %s' % login.replace('true',on).replace('false',off)                  ,'togglesetting', 'keeplogin',      icon=ICONLOGIN, themeit=THEME1)
 	#addFile('Keep \'Sources.xml\': %s' % sources.replace('true',on).replace('false',off)           ,'togglesetting', 'keepsources',    icon=ICONSAVE,  themeit=THEME1)
 	addFile('Keep \'Profiles.xml\': %s' % profiles.replace('true',on).replace('false',off)         ,'togglesetting', 'keepprofiles',   icon=ICONSAVE,  themeit=THEME1)
@@ -1398,40 +1301,6 @@ def realMenu():
 	addFile('Clear All Saved Real Debrid Data',   'cleardebrid',   'all', icon=ICONREAL,  themeit=THEME3)
 	addFile('Clear All Addon Data',               'addondebrid',   'all', icon=ICONREAL,  themeit=THEME3)
 	setView('files', 'viewType')
-def allucMenu():
-	alluc = '[COLOR green]ON[/COLOR]' if KEEPALLUC == 'true' else '[COLOR red]OFF[/COLOR]'
-	last  = str(ALLUCSAVE) if not ALLUCSAVE == '' else 'Alluc Login hasnt been saved yet.'
-	addFile('[I]http://accounts.alluc.com/ is a Free service.[/I]', '', icon=ICONLOGIN, themeit=THEME3)
-	addFile('Save Alluc Login Data: %s' % alluc, 'togglesetting', 'keepalluc', icon=ICONLOGIN, themeit=THEME3)
-	if KEEPALLUC == 'true': addFile('Last Save: %s' % str(last), '', icon=ICONLOGIN, themeit=THEME3)
-	if HIDESPACERS == 'No': addFile(wiz.sep(), '', icon=ICONLOGIN, themeit=THEME3)
-	for alluc in allucit.ORDER:
-		name   = ALLUCID[alluc]['name']
-		path   = ALLUCID[alluc]['path']
-		saved  = ALLUCID[alluc]['saved']
-		file   = ALLUCID[alluc]['file']
-		user   = wiz.getS(saved)
-		auser  = allucit.allucUser(alluc)
-		icon   = ALLUCID[alluc]['icon']   if os.path.exists(path) else ICONLOGIN
-		fanart = ALLUCID[alluc]['fanart'] if os.path.exists(path) else FANART
-		menu = createMenu('saveaddon', 'ALLUC', alluc)
-		menu2 = createMenu('save', 'Alluc', alluc)
-		menu.append((THEME2 % '%s Settings' % name,              'RunPlugin(plugin://%s/?mode=opensettings&name=%s&url=alluc)' %   (ADDON_ID, alluc)))
-		addFile('[+]-> %s' % name,     '', icon=icon, fanart=fanart, themeit=THEME3)
-		if not os.path.exists(path): addFile('[COLOR red]Addon Data: Not Installed[/COLOR]', '', icon=icon, fanart=fanart, menu=menu)
-		elif not auser:              addFile('[COLOR red]Addon Data: Not Registered[/COLOR]','authalluc', alluc, icon=icon, fanart=fanart, menu=menu)
-		else:                        addFile('[COLOR green]Addon Data: %s[/COLOR]' % auser,'authalluc', alluc, icon=icon, fanart=fanart, menu=menu)
-		if user == "":
-			if os.path.exists(file): addFile('[COLOR red]Saved Data: Save File Found(Import Data)[/COLOR]','importalluc', alluc, icon=icon, fanart=fanart, menu=menu2)
-			else :                   addFile('[COLOR red]Saved Data: Not Saved[/COLOR]','savealluc', alluc, icon=icon, fanart=fanart, menu=menu2)
-		else:                        addFile('[COLOR green]Saved Data: %s[/COLOR]' % user, '', icon=icon, fanart=fanart, menu=menu2)
-	if HIDESPACERS == 'No': addFile(wiz.sep(), '', themeit=THEME3)
-	addFile('Save All Alluc Login Data',          'savealluc',    'all', icon=ICONREAL,  themeit=THEME3)
-	addFile('Recover All Saved Alluc Login Data', 'restorealluc', 'all', icon=ICONREAL,  themeit=THEME3)
-	addFile('Import Alluc Login Data',            'importalluc',  'all', icon=ICONREAL,  themeit=THEME3)
-	addFile('Clear All Saved Alluc Login Data',   'clearalluc',   'all', icon=ICONREAL,  themeit=THEME3)
-	addFile('Clear All Addon Data',               'addonalluc',   'all', icon=ICONREAL,  themeit=THEME3)
-	setView('files', 'viewType')
 def loginMenu():
 	login = '[COLOR green]ON[/COLOR]' if KEEPLOGIN == 'true' else '[COLOR red]OFF[/COLOR]'
 	last = str(LOGINSAVE) if not LOGINSAVE == '' else 'Login data hasnt been saved yet.'
@@ -1471,7 +1340,7 @@ def fixUpdate():
 		dbfile = os.path.join(DATABASE, wiz.latestDB('Addons'))
 		try:
 			os.remove(dbfile)
-		except Exception, e:
+		except Exception as e:
 			wiz.log("Unable to remove %s, Purging DB" % dbfile)
 			wiz.purgeDb(dbfile)
 	else:
@@ -1483,7 +1352,7 @@ def fixUpdate():
 		dbfile = os.path.join(DATABASE, wiz.latestDB('Addons'))
 		try:
 			os.remove(dbfile)
-		except Exception, e:
+		except Exception as e:
 			wiz.log("Unable to remove %s, Purging DB" % dbfile)
 			wiz.purgeDb(dbfile)
 		wiz.killxbmc(True)
@@ -1497,7 +1366,7 @@ def removeAddonMenu():
 		elif foldername == 'packages': continue
 		xml = os.path.join(folder, 'addon.xml')
 		if os.path.exists(xml):
-			f      = open(xml)
+			f      = open(xml, encoding='utf-8')
 			a      = f.read()
 			match  = wiz.parseDOM(a, 'addon', ret='id')
 			addid  = foldername if len(match) == 0 else match[0]
@@ -1559,7 +1428,7 @@ def removeAddonDataMenu():
 			addFile(' %s' % folderdisplay, 'removedata', foldername, icon=icon, fanart=fanart, themeit=THEME2)
 	else:
 		addFile('No Addon data folder found.', '', themeit=THEME3)
-	setView('files', 'viewType')
+	#setView('files', 'viewType')
 def enableAddons():
 	addFile("[I][B][COLOR red]!!Notice: Disabling Some Addons Can Cause Issues!![/COLOR][/B][/I]", '', icon=ICONMAINT)
 	fold = glob.glob(os.path.join(ADDONS, '*/'))
@@ -1572,7 +1441,7 @@ def enableAddons():
 		if os.path.exists(addonxml):
 			x += 1
 			fold   = folder.replace(ADDONS, '')[1:-1]
-			f      = open(addonxml)
+			f      = open(addonxml, encoding='utf-8')
 			a      = f.read().replace('\n','').replace('\r','').replace('\t','')
 			match  = wiz.parseDOM(a, 'addon', ret='id')
 			match2 = wiz.parseDOM(a, 'addon', ret='name')
@@ -1627,22 +1496,22 @@ def buildWizard(name, type, theme=None, over=False):
 	if type == 'gui':
 		if name == BUILDNAME:
 			if over == True: yes = 1
-			else: yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to apply the guifix for:' % COLOR2, '[COLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Apply Fix[/COLOR][/B]')
+			else: yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to apply the guifix for:' % COLOR2 + '\n[COLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Apply Fix[/COLOR][/B]')
 		else: 
-			yes = DIALOG.yesno("%s - [COLOR red]WARNING!![/COLOR]" % ADDONTITLE, "[COLOR %s][COLOR %s]%s[/COLOR] community build is not currently installed." % (COLOR2, COLOR1, name), "Would you like to apply the guiFix anyways?.[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Apply Fix[/COLOR][/B]')
+			yes = DIALOG.yesno("%s - [COLOR red]WARNING!![/COLOR]" % ADDONTITLE + "\n[COLOR %s][COLOR %s]%s[/COLOR] community build is not currently installed." % (COLOR2, COLOR1, name), "Would you like to apply the guiFix anyways?.[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Apply Fix[/COLOR][/B]')
 		if yes:
 			buildzip = wiz.checkBuild(name,'gui')
 			zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
 			if not wiz.workingURL(buildzip) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]GuiFix: Invalid Zip Url![/COLOR]' % COLOR2); return
 			if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading GuiFix:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name),'', 'Please Wait')
+			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading GuiFix:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name) + '\nPlease Wait')
 			lib=os.path.join(PACKAGES, '%s_guisettings.zip' % zipname)
 			try: os.remove(lib)
 			except: pass
 			downloader.download(buildzip, lib, DP)
 			xbmc.sleep(500)
 			title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-			DP.update(0, title,'', 'Please Wait')
+			DP.update(0, title + '\nPlease Wait')
 			extract.all(lib,USERDATA,DP, title=title)
 			DP.close()
 			wiz.defaultSkin()
@@ -1667,9 +1536,6 @@ def buildWizard(name, type, theme=None, over=False):
 			if KEEPREAL == 'true':
 				debridit.autoUpdate('all')
 				wiz.setS('debridlastsave', str(THREEDAYS))
-			if KEEPALLUC == 'true':
-				allucit.autoUpdate('all')
-				wiz.setS('allucnlastsave', str(THREEDAYS))
 			if KEEPLOGIN == 'true':
 				loginit.autoUpdate('all')
 				wiz.setS('loginlastsave', str(THREEDAYS))
@@ -1679,10 +1545,10 @@ def buildWizard(name, type, theme=None, over=False):
 			else: warning = True
 		else: warning = False
 		if warning == True:
-			yes_pressed = DIALOG.yesno("%s - [COLOR red]WARNING!![/COLOR]" % ADDONTITLE, '[COLOR %s]There is a chance that the skin will not appear correctly' % COLOR2, 'When installing a %s build on a Kodi %s install' % (wiz.checkBuild(name, 'kodi'), KODIV), 'Would you still like to install: [COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Yes, Install[/COLOR][/B]')
+			yes_pressed = DIALOG.yesno("%s - [COLOR red]WARNING!![/COLOR]" % ADDONTITLE, '[COLOR %s]There is a chance that the skin will not appear correctly' % COLOR2 + '\nWhen installing a %s build on a Kodi %s install' % (wiz.checkBuild(name, 'kodi'), KODIV) + '\nWould you still like to install: [COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Yes, Install[/COLOR][/B]')
 		else:
 			if not over == False: yes_pressed = 1
-			else: yes_pressed = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to Download and Install:' % COLOR2, '[COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Yes, Install[/COLOR][/B]')
+			else: yes_pressed = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to Download and Install:' % COLOR2 + '\n[COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]',yeslabel='[B][COLOR green]Yes, Install[/COLOR][/B]')
 		if yes_pressed:
 			wiz.clearS('build')
 			#buildzips = []
@@ -1709,14 +1575,14 @@ def buildWizard(name, type, theme=None, over=False):
 			zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
 			if not wiz.workingURL(buildzip) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Build Install: Invalid Zip Url![/COLOR]' % COLOR2); return
 			if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s v%s[/COLOR]' % (COLOR2, COLOR1, name, wiz.checkBuild(name,'version')),'', 'Please Wait')
+			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s v%s[/COLOR]' % (COLOR2, COLOR1, name, wiz.checkBuild(name,'version')) + '\nPlease Wait')
 			lib=os.path.join(PACKAGES, '%s.zip' % zipname)
 			try: os.remove(lib)
 			except: pass
 			downloader.download(buildzip, lib, DP)
 			xbmc.sleep(500)
 			title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s v%s[/COLOR]' % (COLOR2, COLOR1, name, wiz.checkBuild(name,'version'))
-			DP.update(0, title,'', 'Please Wait')
+			DP.update(0, title + '\nPlease Wait')
 			percent, errors, error = extract.all(lib,HOME,DP, title=title)
 			if int(float(percent)) > 0:
 				wiz.fixmetas()
@@ -1735,9 +1601,9 @@ def buildWizard(name, type, theme=None, over=False):
 				try: os.remove(lib)
 				except: pass
 				if int(float(errors)) > 0:
-					yes=DIALOG.yesno(ADDONTITLE, '[COLOR %s][COLOR %s]%s v%s[/COLOR]' % (COLOR2, COLOR1, name, wiz.checkBuild(name,'version')), 'Completed: [COLOR %s]%s%s[/COLOR] [Errors:[COLOR %s]%s[/COLOR]]' % (COLOR1, percent, '%', COLOR1, errors), 'Would you like to view the errors?[/COLOR]', nolabel='[B][COLOR red]No Thanks[/COLOR][/B]', yeslabel='[B][COLOR green]View Errors[/COLOR][/B]')
+					yes=DIALOG.yesno(ADDONTITLE, '[COLOR %s][COLOR %s]%s v%s[/COLOR]' % (COLOR2, COLOR1, name, wiz.checkBuild(name,'version')) + '\nCompleted: [COLOR %s]%s%s[/COLOR] [Errors:[COLOR %s]%s[/COLOR]]' % (COLOR1, percent, '%', COLOR1, errors) + '\nWould you like to view the errors?[/COLOR]', nolabel='[B][COLOR red]No Thanks[/COLOR][/B]', yeslabel='[B][COLOR green]View Errors[/COLOR][/B]')
 					if yes:
-						if isinstance(errors, unicode):
+						if isinstance(errors, str):
 							error = error.encode('utf-8')
 						wiz.TextBox(ADDONTITLE, error)
 				DP.close()
@@ -1747,7 +1613,7 @@ def buildWizard(name, type, theme=None, over=False):
 				if KODIV >= 17: wiz.addonDatabase(ADDON_ID, 1)
 				DIALOG.ok(ADDONTITLE, "[COLOR %s]To save changes you now need to force close Kodi, Press OK to force close Kodi[/COLOR]" % COLOR2); wiz.killxbmc('true')
 			else:
-				if isinstance(errors, unicode):
+				if isinstance(errors, str):
 					error = error.encode('utf-8')
 				wiz.TextBox("%s: Error Installing Build" % ADDONTITLE, error)
 		else:
@@ -1759,7 +1625,7 @@ def buildWizard(name, type, theme=None, over=False):
 			if not themefile == 'http://' and wiz.workingURL(themefile) == True:
 				themelist = wiz.themeCount(name, False)
 				if len(themelist) > 0:
-					if DIALOG.yesno(ADDONTITLE, "[COLOR %s]The Build [COLOR %s]%s[/COLOR] comes with [COLOR %s]%s[/COLOR] different themes" % (COLOR2, COLOR1, name, COLOR1, len(themelist)), "Would you like to install one now?[/COLOR]", yeslabel="[B][COLOR green]Install Theme[/COLOR][/B]", nolabel="[B][COLOR red]Cancel Themes[/COLOR][/B]"):
+					if DIALOG.yesno(ADDONTITLE, "[COLOR %s]The Build [COLOR %s]%s[/COLOR] comes with [COLOR %s]%s[/COLOR] theme(s)" % (COLOR2, COLOR1, name, COLOR1, len(themelist)) + "\nWould you like to install one now?[/COLOR]", yeslabel="[B][COLOR green]Install Theme[/COLOR][/B]", nolabel="[B][COLOR red]Cancel Themes[/COLOR][/B]"):
 						wiz.log("Theme List: %s " % str(themelist))
 						ret = DIALOG.select(ADDONTITLE, themelist)
 						wiz.log("Theme install selected: %s" % ret)
@@ -1767,30 +1633,37 @@ def buildWizard(name, type, theme=None, over=False):
 						else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Theme Install: Cancelled![/COLOR]' % COLOR2); return
 					else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Theme Install: Cancelled![/COLOR]' % COLOR2); return
 			else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Theme Install: None Found![/COLOR]' % COLOR2)
-		else: installtheme = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to install the theme:' % COLOR2, '[COLOR %s]%s[/COLOR]' % (COLOR1, theme), 'for [COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), yeslabel="[B][COLOR green]Install Theme[/COLOR][/B]", nolabel="[B][COLOR red]Cancel Themes[/COLOR][/B]")
+		else: installtheme = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to install the theme:' % COLOR2 + '\n[COLOR %s]%s[/COLOR]' % (COLOR1, theme) + '\nfor [COLOR %s]%s v%s[/COLOR]?[/COLOR]' % (COLOR1, name, wiz.checkBuild(name,'version')), yeslabel="[B][COLOR green]Install Theme[/COLOR][/B]", nolabel="[B][COLOR red]Cancel Themes[/COLOR][/B]")
 		if installtheme:
 			themezip = wiz.checkTheme(name, theme, 'url')
 			zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
 			if not wiz.workingURL(themezip) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Theme Install: Invalid Zip Url![/COLOR]' % COLOR2); return False
 			if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, theme),'', 'Please Wait')
+			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, theme) + '\nPlease Wait')
 			lib=os.path.join(PACKAGES, '%s.zip' % zipname)
 			try: os.remove(lib)
 			except: pass
 			downloader.download(themezip, lib, DP)
 			xbmc.sleep(500)
-			DP.update(0,"", "Installing %s " % name)
+			DP.update(0, "Installing %s " % name)
 			test = False
+			
+			'''
 			if url not in ["fresh", "normal"]:
-				test = testTheme(lib) if not wiz.currSkin() in ['skin.confluence', 'skin.estuary'] else False
-				test2 = testGui(lib) if not wiz.currSkin() in ['skin.confluence', 'skin.estuary'] else False
+				test = testTheme(lib) if not wiz.currSkin() in ['skin.estuary'] else False
+				test2 = testGui(lib) if not wiz.currSkin() in ['skin.estuary'] else False
+				xbmc.log('test= ' + str(test), xbmc.LOGINFO)
 				if test == True:
 					wiz.lookandFeelData('save')
+					xbmc.log('Lookandfeel saved', xbmc.LOGINFO)
+					window.close()
 					swap = wiz.skinToDefault('Theme Install')
 					if swap == False: return False
 					xbmc.sleep(500)
+			'''
+			
 			title = '[COLOR %s][B]Installing Theme:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, theme)
-			DP.update(0, title,'', 'Please Wait')
+			DP.update(0, title + '\nPlease Wait')
 			percent, errors, error = extract.all(lib,HOME,DP, title=title)
 			wiz.setS('buildtheme', theme)
 			wiz.log('INSTALLED %s: [ERRORS:%s]' % (percent, errors))
@@ -1800,6 +1673,8 @@ def buildWizard(name, type, theme=None, over=False):
 				if KODIV >= 17: 
 					installed = grabAddons(lib)
 					wiz.addonDatabase(installed, 1, True)
+				
+				'''
 				if test2 == True:
 					wiz.lookandFeelData('save')
 					wiz.defaultSkin()
@@ -1813,51 +1688,11 @@ def buildWizard(name, type, theme=None, over=False):
 				else:
 					wiz.ebi("ReloadSkin()")
 					xbmc.sleep(1000)
-					wiz.ebi("Container.Refresh") 
+					wiz.ebi("Container.Refresh")
+				'''
+				
 		else:
 			wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Theme Install: Cancelled![/COLOR]' % COLOR2)
-def thirdPartyInstall(name, url):
-	if not wiz.workingURL(url):
-		LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Invalid URL for Build[/COLOR]' % COLOR2); return
-	type = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to preform a [COLOR %s]Fresh Install[/COLOR] or [COLOR %s]Normal Install[/COLOR] for:[/COLOR]" % (COLOR2, COLOR1, COLOR1), "[COLOR %s]%s[/COLOR]" % (COLOR1, name), yeslabel="[B][COLOR green]Fresh Install[/COLOR][/B]", nolabel="[B][COLOR red]Normal Install[/COLOR][/B]")
-	if type == 1:
-		freshStart('third', True)
-	wiz.clearS('build')
-	zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
-	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name),'', 'Please Wait')
-	lib=os.path.join(PACKAGES, '%s.zip' % zipname)
-	try: os.remove(lib)
-	except: pass
-	downloader.download(url, lib, DP)
-	xbmc.sleep(500)
-	title = '[COLOR %s][B]Installing:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-	DP.update(0, title,'', 'Please Wait')
-	percent, errors, error = extract.all(lib,HOME,DP, title=title)
-	if int(float(percent)) > 0:
-		wiz.fixmetas()
-		wiz.lookandFeelData('save')
-		wiz.defaultSkin()
-		#wiz.addonUpdates('set')
-		wiz.setS('installed', 'true')
-		wiz.setS('extract', str(percent))
-		wiz.setS('errors', str(errors))
-		wiz.log('INSTALLED %s: [ERRORS:%s]' % (percent, errors))
-		try: os.remove(lib)
-		except: pass
-		if int(float(errors)) > 0:
-			yes=DIALOG.yesno(ADDONTITLE, '[COLOR %s][COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name), 'Completed: [COLOR %s]%s%s[/COLOR] [Errors:[COLOR %s]%s[/COLOR]]' % (COLOR1, percent, '%', COLOR1, errors), 'Would you like to view the errors?[/COLOR]', nolabel='[B][COLOR red]No Thanks[/COLOR][/B]',yeslabel='[B][COLOR green]View Errors[/COLOR][/B]')
-			if yes:
-				if isinstance(errors, unicode):
-					error = error.encode('utf-8')
-				wiz.TextBox(ADDONTITLE, error)
-	DP.close()
-	if KODIV >= 17: wiz.addonDatabase(ADDON_ID, 1)
-	if INSTALLMETHOD == 1: todo = 1
-	elif INSTALLMETHOD == 2: todo = 0
-	else: todo = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to [COLOR %s]Force close[/COLOR] kodi or [COLOR %s]Reload Profile[/COLOR]?[/COLOR]" % (COLOR2, COLOR1, COLOR1), yeslabel="[B][COLOR green]Reload Profile[/COLOR][/B]", nolabel="[B][COLOR red]Force Close[/COLOR][/B]")
-	if todo == 1: wiz.reloadFix()
-	else: wiz.killxbmc(True)
 def testTheme(path):
 	zfile = zipfile.ZipFile(path)
 	for item in zfile.infolist():
@@ -1884,12 +1719,12 @@ def apkInstaller(apk, url):
 	wiz.log(apk)
 	wiz.log(url)
 	if wiz.platform() == 'android'  or DEVELOPER == 'true':
-		yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to download and install:" % COLOR2, "[COLOR %s]%s[/COLOR]" % (COLOR1, apk), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
+		yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to download and install:" % COLOR2 + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, apk), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
 		if not yes: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]ERROR: Install Cancelled[/COLOR]' % COLOR2); return
 		display = apk
 		if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
 		if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]APK Installer: Invalid Apk Url![/COLOR]' % COLOR2); return
-		DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display),'', 'Please Wait')
+		DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display) + '\nPlease Wait')
 		lib=os.path.join(PACKAGES, "%s.apk" % apk.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', ''))
 		try: os.remove(lib)
 		except: pass
@@ -1901,36 +1736,36 @@ def apkInstaller(apk, url):
 	else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]ERROR: None Android Device[/COLOR]' % COLOR2)
 def apkInstaller1(apk, url):
 	if wiz.platform() == 'android' or DEVELOPER == 'true':
-		yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to download and install:" % COLOR2, "[COLOR %s]%s[/COLOR]" % (COLOR1, apk), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
+		yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Would you like to download and install:" % COLOR2 + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, apk), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
 		if not yes: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]ERROR: Install Cancelled[/COLOR]' % COLOR2); return
 		display = apk
 		if yes:
 			if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
 			if not wiz.workingURL(url) == True: wiz.LogNotify(ADDONTITLE, 'APK Installer: [COLOR red]Invalid Apk Url![/COLOR]'); return
-			DP.create(ADDONTITLE,'Downloading %s' % display,'', 'Please Wait')
+			DP.create(ADDONTITLE,'Downloading %s' % display + '\nPlease Wait')
 			lib=os.path.join(PACKAGES, "%s.apk" % apk.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', ''))
 			try: os.remove(lib)
 			except: pass
 			downloader.download(url, lib, DP)
 			xbmc.sleep(500)
 			DP.close()
-			DIALOG.ok(ADDONTITLE, "Launching the APK to be installed", "Follow the install process to complete.")
+			DIALOG.ok(ADDONTITLE, "Launching the APK to be installed\nFollow the install process to complete.")
 			xbmc.executebuiltin('StartAndroidActivity("","android.intent.action.VIEW","application/vnd.android.package-archive","file:'+lib+'")')
 		else: wiz.LogNotify(ADDONTITLE, '[COLOR red]ERROR:[/COLOR] Install Cancelled')
 	else: wiz.LogNotify(ADDONTITLE, '[COLOR red]ERROR:[/COLOR] None Android Device')
 def romInstaller(name, url):
-	myroms = xbmc.translatePath(BACKUPROMS)
+	myroms = xbmcvfs.translatePath(BACKUPROMS)
 	if myroms == '':
-		if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that you do not have an extract location setup for Rom Packs" % COLOR2, "Would you like to set one?[/COLOR]", yeslabel="[COLOR green][B]Set Location[/B][/COLOR]", nolabel="[COLOR red][B]Cancel Download[/B][/COLOR]"):
+		if DIALOG.yesno(ADDONTITLE, "[COLOR %s]It seems that you do not have an extract location setup for Rom Packs" % COLOR2 + "\nWould you like to set one?[/COLOR]", yeslabel="[COLOR green][B]Set Location[/B][/COLOR]", nolabel="[COLOR red][B]Cancel Download[/B][/COLOR]"):
 			wiz.openS()
 			myroms = wiz.getS('rompath')
 			if myroms == '': return
-	yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Are you sure you would like to download and extract [COLOR %s]%s[/COLOR] to:" % (COLOR2, COLOR1, name), "[COLOR %s]%s[/COLOR]" % (COLOR1, myroms), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
+	yes = DIALOG.yesno(ADDONTITLE, "[COLOR %s]Are you sure you would like to download and extract [COLOR %s]%s[/COLOR] to:" % (COLOR2, COLOR1, name) + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, myroms), yeslabel="[B][COLOR green]Download[/COLOR][/B]", nolabel="[B][COLOR red]Cancel[/COLOR][/B]")
 	if not yes: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]ERROR: Install Cancelled[/COLOR]' % COLOR2); return
 	display = name
 	if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
 	if not wiz.workingURL(url) == True: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]APK Installer: Invalid Rom Url![/COLOR]' % COLOR2); return
-	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display),'', 'Please Wait')
+	DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, display) + '\nPlease Wait')
 	lib=os.path.join(PACKAGES, "%s.zip" % name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', ''))
 	try: os.remove(lib)
 	except: pass
@@ -1944,22 +1779,22 @@ def romInstaller(name, url):
 ###########################
 ###### Misc Functions######
 ###########################
-def createMenu(type, add, name):
-	if   type == 'saveaddon':
+def createMenu(_type, add, name):
+	if   _type == 'saveaddon':
 		menu_items=[]
-		add2  = urllib.quote_plus(add.lower().replace(' ', ''))
+		add2  = urllib.parse.quote_plus(add.lower().replace(' ', ''))
 		add3  = add.replace('Debrid', 'Real Debrid')
-		name2 = urllib.quote_plus(name.lower().replace(' ', ''))
+		name2 = urllib.parse.quote_plus(name.lower().replace(' ', ''))
 		name = name.replace('url', 'URL Resolver')
 		menu_items.append((THEME2 % name.title(),             ' '))
 		menu_items.append((THEME3 % 'Save %s Data' % add3,               'RunPlugin(plugin://%s/?mode=save%s&name=%s)' %    (ADDON_ID, add2, name2)))
 		menu_items.append((THEME3 % 'Restore %s Data' % add3,            'RunPlugin(plugin://%s/?mode=restore%s&name=%s)' % (ADDON_ID, add2, name2)))
 		menu_items.append((THEME3 % 'Clear %s Data' % add3,              'RunPlugin(plugin://%s/?mode=clear%s&name=%s)' %   (ADDON_ID, add2, name2)))
-	elif type == 'save'    :
+	elif _type == 'save'    :
 		menu_items=[]
-		add2  = urllib.quote_plus(add.lower().replace(' ', ''))
+		add2  = urllib.parse.quote_plus(add.lower().replace(' ', ''))
 		add3  = add.replace('Debrid', 'Real Debrid')
-		name2 = urllib.quote_plus(name.lower().replace(' ', ''))
+		name2 = urllib.parse.quote_plus(name.lower().replace(' ', ''))
 		name = name.replace('url', 'URL Resolver')
 		menu_items.append((THEME2 % name.title(),             ' '))
 		menu_items.append((THEME3 % 'Register %s' % add3,                'RunPlugin(plugin://%s/?mode=auth%s&name=%s)' %    (ADDON_ID, add2, name2)))
@@ -1967,9 +1802,9 @@ def createMenu(type, add, name):
 		menu_items.append((THEME3 % 'Restore %s Data' % add3,            'RunPlugin(plugin://%s/?mode=restore%s&name=%s)' % (ADDON_ID, add2, name2)))
 		menu_items.append((THEME3 % 'Import %s Data' % add3,             'RunPlugin(plugin://%s/?mode=import%s&name=%s)' %  (ADDON_ID, add2, name2)))
 		menu_items.append((THEME3 % 'Clear Addon %s Data' % add3,        'RunPlugin(plugin://%s/?mode=addon%s&name=%s)' %   (ADDON_ID, add2, name2)))
-	elif type == 'install'  :
+	elif _type == 'install'  :
 		menu_items=[]
-		name2 = urllib.quote_plus(name)
+		name2 = urllib.parse.quote_plus(name)
 		menu_items.append((THEME2 % name,                                'RunAddon(%s, ?mode=viewbuild&name=%s)'  % (ADDON_ID, name2)))
 		menu_items.append((THEME3 % 'Fresh Install',                     'RunPlugin(plugin://%s/?mode=install&name=%s&url=fresh)'  % (ADDON_ID, name2)))
 		menu_items.append((THEME3 % 'Normal Install',                    'RunPlugin(plugin://%s/?mode=install&name=%s&url=normal)' % (ADDON_ID, name2)))
@@ -1978,8 +1813,8 @@ def createMenu(type, add, name):
 	menu_items.append((THEME2 % '%s Settings' % ADDONTITLE,              'RunPlugin(plugin://%s/?mode=settings)' % ADDON_ID))
 	return menu_items
 def toggleCache(state):
-	cachelist = ['includevideo', 'includeall', 'includebob', 'includezen,' 'includephoenix', 'includespecto', 'includegenesis', 'includeexodus', 'includeonechan', 'includesalts', 'includesaltslite']
-	titlelist = ['Include Video Addons', 'Include All Addons', 'Include Bob', 'Include Zen', 'Include Phoenix', 'Include Specto', 'Include Genesis', 'Include Exodus', 'Include One Channel', 'Include Salts', 'Include Salts Lite HD']
+	cachelist = ['includevideo', 'includeall']
+	titlelist = ['Include Video Addons', 'Include All Addons']
 	if state in ['true', 'false']:
 		for item in cachelist:
 			wiz.setS(item, state)
@@ -2011,7 +1846,7 @@ def viewLogFile():
 	wiz.TextBox("%s - %s" % (ADDONTITLE, logtype), msg)
 def errorList(file):
 	errors = []
-	a=open(file).read()
+	a=open(file, encoding='utf-8').read()
 	b=a.replace('\n','[CR]').replace('\r','')
 	match = re.compile("-->Python callback/script returned the following error<--(.+?)-->End of Python script error report<--").findall(b)
 	for item in match:
@@ -2095,7 +1930,7 @@ def LogViewer(default=None):
 			self.kodiold    = 203
 			self.wizard     = 204 
 			self.okbutton   = 205 
-			f = open(self.default, 'r')
+			f = open(self.default, 'r', encoding='utf-8')
 			self.logmsg = f.read()
 			f.close()
 			self.titlemsg = "%s: %s" % (ADDONTITLE, self.default.replace(LOG, '').replace(ADDONDATA, ''))
@@ -2160,14 +1995,14 @@ def removeAddon(addon, name, over=False):
 	if not over == False:
 		yes = 1
 	else: 
-		yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Are you sure you want to delete the addon:'% COLOR2, 'Name: [COLOR %s]%s[/COLOR]' % (COLOR1, name), 'ID: [COLOR %s]%s[/COLOR][/COLOR]' % (COLOR1, addon), yeslabel='[B][COLOR green]Remove Addon[/COLOR][/B]', nolabel='[B][COLOR red]Don\'t Remove[/COLOR][/B]')
+		yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Are you sure you want to delete the addon:'% COLOR2 + '\nName: [COLOR %s]%s[/COLOR]' % (COLOR1, name) + '\nID: [COLOR %s]%s[/COLOR][/COLOR]' % (COLOR1, addon), yeslabel='[B][COLOR green]Remove Addon[/COLOR][/B]', nolabel='[B][COLOR red]Don\'t Remove[/COLOR][/B]')
 	if yes == 1:
 		folder = os.path.join(ADDONS, addon)
 		wiz.log("Removing Addon %s" % addon)
 		wiz.cleanHouse(folder)
 		xbmc.sleep(200)
 		try: shutil.rmtree(folder)
-		except Exception ,e: wiz.log("Error removing %s" % addon, xbmc.LOGNOTICE)
+		except Exception as e: wiz.log("Error removing %s" % addon, xbmc.LOGINFO)
 		removeAddonData(addon, name, over)
 	if over == False:
 		wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]%s Removed[/COLOR]" % (COLOR2, name))
@@ -2196,7 +2031,7 @@ def removeAddonData(addon, name=None, over=False):
 		if addon in EXCLUDES:
 			wiz.LogNotify("[COLOR %s]Protected Plugin[/COLOR]" % COLOR1, "[COLOR %s]Not allowed to remove Addon_Data[/COLOR]" % COLOR2)
 		elif os.path.exists(addon_data):  
-			if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you also like to remove the addon data for:[/COLOR]' % COLOR2, '[COLOR %s]%s[/COLOR]' % (COLOR1, addon), yeslabel='[B][COLOR green]Remove Data[/COLOR][/B]', nolabel='[B][COLOR red]Don\'t Remove[/COLOR][/B]'):
+			if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you also like to remove the addon data for:[/COLOR]' % COLOR2 + '\n[COLOR %s]%s[/COLOR]' % (COLOR1, addon), yeslabel='[B][COLOR green]Remove Data[/COLOR][/B]', nolabel='[B][COLOR red]Don\'t Remove[/COLOR][/B]'):
 				wiz.cleanHouse(addon_data)
 				try:
 					shutil.rmtree(addon_data)
@@ -2209,7 +2044,7 @@ def restoreit(type):
 	if type == 'build':
 		x = freshStart('restore')
 		if x == False: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Local Restore Cancelled[/COLOR]" % COLOR2); return
-	if not wiz.currSkin() in ['skin.confluence', 'skin.estuary']:
+	if not wiz.currSkin() in ['skin.estuary']:
 		wiz.skinToDefault('Restore Backup')
 	wiz.restoreLocal(type)
 def restoreextit(type):
@@ -2259,7 +2094,7 @@ def buildInfo(name):
 				msg += "[COLOR %s]Description:[/COLOR] [COLOR %s]%s[/COLOR][CR]" % (COLOR2, COLOR1, description)
 			wiz.TextBox(ADDONTITLE, msg)
 		else: wiz.log("Invalid Build Name!")
-	else: wiz.log("Build text file not working: %s" % WORKINGURL)
+	else: wiz.log("Build text file not working: %s" % BUILDFILE)
 
 def viewpack():
 	WORKINGURL = wiz.workingURL(ADDONPACK)
@@ -2272,23 +2107,23 @@ def viewpack():
 	for name, url, icon, fanart, description in match:
 		addFolder('',name,url,'addonpackwiz',icon,fanart,'')
 def addonpackwiz():
-		yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to install the:' % COLOR2, '[COLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name), nolabel='[B]No, Cancel[/B]',yeslabel='[B]Install[/B]')
+		yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to install the:' % COLOR2 + '\n[COLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name), nolabel='[B]No, Cancel[/B]',yeslabel='[B]Install[/B]')
 		if yes:
 			if not os.path.exists(PACKAGES): os.makedirs(PACKAGES)
-			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name),'', 'Please Wait')
+			DP.create(ADDONTITLE,'[COLOR %s][B]Downloading:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name) + '\nPlease Wait')
 			lib=os.path.join(PACKAGES, 'pack.zip')
 			try: os.remove(lib)
 			except: pass
 			downloader.download(url, lib, DP)
 			xbmc.sleep(500)
-			DP.update(0,"", "Installing %s " % name)
+			DP.update(0, "Installing %s " % name)
 			title = '[COLOR %s][B]Installing Addon Pack:[/B][/COLOR] [COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name)
-			DP.update(0, title,'', 'Please Wait')
+			DP.update(0, title + '\nPlease Wait')
 			percent, errors, error = extract.all(lib,HOME,DP, title=title)
 			wiz.log('INSTALLED %s: [ERRORS:%s]' % (percent, errors))
 			DP.close()
 			#DIALOG.ok(ADDONTITLE, "[COLOR %s]Addon Pack installed, you need to reset Kodi, Press OK to reset Kodi[/COLOR]" % COLOR2)
-			yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Installed:' % COLOR2, '[COLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name),'[COLOR green]Successfully[/COLOR]', nolabel='[B]Reset[/B]',yeslabel='[B]Force Close[/B]')
+			yes = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Installed:' % COLOR2 + '[\nCOLOR %s]%s[/COLOR]?[/COLOR]' % (COLOR1, name) + '\n[COLOR green]Successfully[/COLOR]', nolabel='[B]Reset[/B]',yeslabel='[B]Force Close[/B]')
 			if yes == 1:
 				wiz.killxbmc('true')
 			elif yes == 0:
@@ -2298,7 +2133,7 @@ def addonpackwiz():
 def dependsList(plugin):
 	addonxml = os.path.join(ADDONS, plugin, 'addon.xml')
 	if os.path.exists(addonxml):
-		source = open(addonxml,mode='r'); link = source.read(); source.close(); 
+		source = open(addonxml,mode='r', encoding='utf-8'); link = source.read(); source.close(); 
 		match  = wiz.parseDOM(link, 'import', ret='addon')
 		items  = []
 		for depends in match:
@@ -2317,7 +2152,7 @@ def manageSaveData(do):
 		tempfile = os.path.join(MYBUILDS, 'SaveData.zip')
 		goto = xbmcvfs.copy(source, tempfile)
 		wiz.log("%s" % str(goto))
-		extract.all(xbmc.translatePath(tempfile), TEMP)
+		extract.all(xbmcvfs.translatePath(tempfile), TEMP)
 		trakt  = os.path.join(TEMP, 'trakt')
 		login  = os.path.join(TEMP, 'login')
 		debrid = os.path.join(TEMP, 'debrid')
@@ -2367,13 +2202,13 @@ def manageSaveData(do):
 		if x == 0: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Save Data Import Failed[/COLOR]" % COLOR2)
 		else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Save Data Import Complete[/COLOR]" % COLOR2)
 	elif do == 'export':
-		mybuilds = xbmc.translatePath(MYBUILDS)
+		mybuilds = xbmcvfs.translatePath(MYBUILDS)
 		dir = [traktit.TRAKTFOLD, debridit.REALFOLD, loginit.LOGINFOLD]
 		traktit.traktIt('update', 'all')
 		loginit.loginIt('update', 'all')
 		debridit.debridIt('update', 'all')
 		source = DIALOG.browse(3, '[COLOR %s]Select where you wish to export the savedata zip?[/COLOR]' % COLOR2, 'files', '', False, True, HOME)
-		source = xbmc.translatePath(source)
+		source = xbmcvfs.translatePath(source)
 		tempzip = os.path.join(mybuilds, 'SaveData.zip')
 		zipf = zipfile.ZipFile(tempzip, mode='w')
 		for fold in dir:
@@ -2383,13 +2218,13 @@ def manageSaveData(do):
 					zipf.write(os.path.join(fold, file), os.path.join(fold, file).replace(ADDONDATA, ''), zipfile.ZIP_DEFLATED)
 		zipf.close()
 		if source == mybuilds:
-			DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2), "[COLOR %s]%s[/COLOR]" % (COLOR1, tempzip))
+			DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2) + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, tempzip))
 		else:
 			try:
 				xbmcvfs.copy(tempzip, os.path.join(source, 'SaveData.zip'))
-				DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2), "[COLOR %s]%s[/COLOR]" % (COLOR1, os.path.join(source, 'SaveData.zip')))
+				DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2) + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, os.path.join(source, 'SaveData.zip')))
 			except:
-				DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2), "[COLOR %s]%s[/COLOR]" % (COLOR1, tempzip))
+				DIALOG.ok(ADDONTITLE, "[COLOR %s]Save data has been backed up to:[/COLOR]" % (COLOR2) + "\n[COLOR %s]%s[/COLOR]" % (COLOR1, tempzip))
 ###########################
 ###### Fresh Install ######
 ###########################
@@ -2404,31 +2239,36 @@ def freshStart(install=None, over=False):
 		loginit.autoUpdate('all')
 		wiz.setS('loginlastsave', str(THREEDAYS))
 	if over == True: yes_pressed = 1
-	elif install == 'restore': yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Click [B][COLOR springgreen] - Yes - [/COLOR][/B]" % COLOR2, "To Erase Your Current Build, \r\nThen Install a Local or External Stored Build Back Up[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
-	elif install: yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Click [B][COLOR springgreen] - Yes - [/COLOR][/B]" % COLOR2, "To Erase Your Current Build, \r\nThen Fresh Install [COLOR %s]%s[/COLOR]!!" % (COLOR1, install), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
-	else: yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Do you wish to restore your" % COLOR2, "Configuration to default settings?[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
+	elif install == 'restore': yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Click [B][COLOR springgreen] - Yes - [/COLOR][/B]" % COLOR2 + "\nTo Erase Your Current Build, \r\nThen Install a Local or External Stored Build Back Up[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
+	elif install: yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Click [B][COLOR springgreen] - Yes - [/COLOR][/B]" % COLOR2 + "\nTo Erase Your Current Build, \r\nThen Fresh Install [COLOR %s]%s[/COLOR]!!" % (COLOR1, install), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
+	else: yes_pressed=DIALOG.yesno(ADDONTITLE, "[COLOR %s]Do you wish to restore your" % COLOR2 + "\nConfiguration to default settings?[/COLOR]", nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes[/COLOR][/B]')
 	if yes_pressed:
-		if not wiz.currSkin() in ['skin.confluence', 'skin.estuary']:
-			skin = 'skin.confluence' if KODIV < 17 else 'skin.estuary'
+		if not wiz.currSkin() in ['skin.estuary']:
+			skin = 'skin.estuary'
 			#yes=DIALOG.yesno(ADDONTITLE, "[COLOR %s]The skin needs to be set back to [COLOR %s]%s[/COLOR]" % (COLOR2, COLOR1, skin[5:]), "Before doing a fresh install to clear all Texture files,", "Would you like us to do that for you?[/COLOR]", yeslabel="[B][COLOR springgreen]Switch Skins[/COLOR][/B]", nolabel="[B][COLOR red]I'll Do It[/COLOR][/B]";
 			#if yes:
+			
+			'''
 			skinSwitch.swapSkins(skin)
+			xbmc.log('swapskin= ' + str(install), xbmc.LOGINFO)
 			x = 0
 			xbmc.sleep(1000)
 			while not xbmc.getCondVisibility("Window.isVisible(yesnodialog)") and x < 150:
 				x += 1
 				xbmc.sleep(200)
-				wiz.ebi('SendAction(Select)')
+				#wiz.ebi('SendAction(Select)')
 			if xbmc.getCondVisibility("Window.isVisible(yesnodialog)"):
 				wiz.ebi('SendClick(11)')
 			else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Fresh Install: Skin Swap Timed Out![/COLOR]' % COLOR2); return False
 			xbmc.sleep(1000)
-		if not wiz.currSkin() in ['skin.confluence', 'skin.estuary']:
+		if not wiz.currSkin() in ['skin.estuary']:
 			wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), '[COLOR %s]Fresh Install: Skin Swap Failed![/COLOR]' % COLOR2)
 			return
+		'''
+			
 		wiz.addonUpdates('set')
 		xbmcPath=os.path.abspath(HOME)
-		DP.create(ADDONTITLE,"[COLOR %s]Calculating files and folders" % COLOR2,'', 'Please Wait![/COLOR]')
+		DP.create(ADDONTITLE,"[COLOR %s]Calculating files and folders" % COLOR2 + '\n' + 'Please Wait![/COLOR]')
 		total_files = sum([len(files) for r, d, files in os.walk(xbmcPath)]); del_file = 0
 		DP.update(0, "[COLOR %s]Gathering Excludes list." % COLOR2)
 		EXCLUDES.append('My_Builds')
@@ -2472,26 +2312,26 @@ def freshStart(install=None, over=False):
 				del_file += 1
 				fold = root.replace('/','\\').split('\\')
 				x = len(fold)-1
-				if name == 'sources.xml' and fold[-1] == 'userdata' and KEEPSOURCES == 'true': wiz.log("Keep Sources: %s" % os.path.join(root, name), xbmc.LOGNOTICE)
-				elif name == 'favourites.xml' and fold[-1] == 'userdata' and KEEPFAVS == 'true': wiz.log("Keep Favourites: %s" % os.path.join(root, name), xbmc.LOGNOTICE)
-				elif name == 'profiles.xml' and fold[-1] == 'userdata' and KEEPPROFILES == 'true': wiz.log("Keep Profiles: %s" % os.path.join(root, name), xbmc.LOGNOTICE)
-				elif name == 'advancedsettings.xml' and fold[-1] == 'userdata' and KEEPADVANCED == 'true':  wiz.log("Keep Advanced Settings: %s" % os.path.join(root, name), xbmc.LOGNOTICE)
-				elif name in LOGFILES: wiz.log("Keep Log File: %s" % name, xbmc.LOGNOTICE)
+				if name == 'sources.xml' and fold[-1] == 'userdata' and KEEPSOURCES == 'true': wiz.log("Keep Sources: %s" % os.path.join(root, name), xbmc.LOGINFO)
+				elif name == 'favourites.xml' and fold[-1] == 'userdata' and KEEPFAVS == 'true': wiz.log("Keep Favourites: %s" % os.path.join(root, name), xbmc.LOGINFO)
+				elif name == 'profiles.xml' and fold[-1] == 'userdata' and KEEPPROFILES == 'true': wiz.log("Keep Profiles: %s" % os.path.join(root, name), xbmc.LOGINFO)
+				elif name == 'advancedsettings.xml' and fold[-1] == 'userdata' and KEEPADVANCED == 'true':  wiz.log("Keep Advanced Settings: %s" % os.path.join(root, name), xbmc.LOGINFO)
+				elif name in LOGFILES: wiz.log("Keep Log File: %s" % name, xbmc.LOGINFO)
 				elif name.endswith('.db'):
 					try:
-						if name == latestAddonDB and KODIV >= 17: wiz.log("Ignoring %s on v%s" % (name, KODIV), xbmc.LOGNOTICE)
+						if name == latestAddonDB and KODIV >= 17: wiz.log("Ignoring %s on v%s" % (name, KODIV), xbmc.LOGINFO)
 						else: os.remove(os.path.join(root,name))
-					except Exception, e: 
+					except Exception as e: 
 						if not name.startswith('Textures13'):
-							wiz.log('Failed to delete, Purging DB', xbmc.LOGNOTICE)
-							wiz.log("-> %s" % (str(e)), xbmc.LOGNOTICE)
+							wiz.log('Failed to delete, Purging DB', xbmc.LOGINFO)
+							wiz.log("-> %s" % (str(e)), xbmc.LOGINFO)
 							wiz.purgeDb(os.path.join(root,name))
 				else:
-					DP.update(int(wiz.percentage(del_file, total_files)), '', '[COLOR %s]File: [/COLOR][COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name), '')
+					DP.update(int(wiz.percentage(del_file, total_files)), '[COLOR %s]File: [/COLOR][COLOR %s]%s[/COLOR]' % (COLOR2, COLOR1, name))
 					try: os.remove(os.path.join(root,name))
-					except Exception, e: 
-						wiz.log("Error removing %s" % os.path.join(root, name), xbmc.LOGNOTICE)
-						wiz.log("-> / %s" % (str(e)), xbmc.LOGNOTICE)
+					except Exception as e: 
+						wiz.log("Error removing %s" % os.path.join(root, name), xbmc.LOGINFO)
+						wiz.log("-> / %s" % (str(e)), xbmc.LOGINFO)
 			if DP.iscanceled(): 
 				DP.close()
 				wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Fresh Start Cancelled[/COLOR]" % COLOR2)
@@ -2499,7 +2339,7 @@ def freshStart(install=None, over=False):
 		for root, dirs, files in os.walk(xbmcPath,topdown=True):
 			dirs[:] = [d for d in dirs if d not in EXCLUDES]
 			for name in dirs:
-				DP.update(100, '', 'Cleaning Up Empty Folder: [COLOR %s]%s[/COLOR]' % (COLOR1, name), '')
+				DP.update(100, 'Cleaning Up Empty Folder: [COLOR %s]%s[/COLOR]' % (COLOR1, name))
 				if name not in ["Database","userdata","temp","addons","addon_data"]:
 					shutil.rmtree(os.path.join(root,name),ignore_errors=True, onerror=None)
 			if DP.iscanceled(): 
@@ -2529,40 +2369,47 @@ def freshStart(install=None, over=False):
 ####THANKS GUYS @ NaN #######
 
 
-def clearCache():
+def clearCache(shortcut=False):
 	if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to clear cache?[/COLOR]' % COLOR2, nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR green]Clear Cache[/COLOR][/B]'):
 		wiz.clearCache()
-		DC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+		if shortcut is False:
+			DC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+
 def clearArchive():
 	if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to clear the \'Archive_Cache\' folder?[/COLOR]' % COLOR2, nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR green]Yes Clear[/COLOR][/B]'):
 		wiz.clearArchive()
-def clearPackages():
+
+def clearPackages(shortcut=False):
 	if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to delete Packages?[/COLOR]' % COLOR2, nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR green]Delete[/COLOR][/B]'):
 		wiz.clearPackages('total')
-		DPK.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		TPK.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
+		if shortcut is False:
+			DPK.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			TPK.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
 
-def totalClean():
+def totalClean(shortcut=False):
 	if DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to clear cache, packages and thumbnails?[/COLOR]' % COLOR2, nolabel='[B][COLOR red]Cancel Process[/COLOR][/B]',yeslabel='[B][COLOR green]Clean All[/COLOR][/B]'):
 		wiz.clearCache()
 		wiz.clearPackages('total')
-		clearThumb('total')
-		TC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		DC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		DPK.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		TPK.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
-		DTH.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		TTH.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
-def clearThumb(type=None):
+		clearThumb('total', shortcut=True)
+		if shortcut is False:
+			TC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			DC.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			DPK.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			TPK.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
+			DTH.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			TTH.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
+def clearThumb(type=None, shortcut=False):
 	latest = wiz.latestDB('Textures')
 	if not type == None: choice = 1
-	else: choice = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to delete the %s and Thumbnails folder?' % (COLOR2, latest), "They will repopulate on the next startup[/COLOR]", nolabel='[B][COLOR red]Don\'t Delete[/COLOR][/B]', yeslabel='[B][COLOR green]Delete Thumbs[/COLOR][/B]')
+	else: choice = DIALOG.yesno(ADDONTITLE, '[COLOR %s]Would you like to delete the %s and Thumbnails folder?' % (COLOR2, latest) + "\nThey will repopulate on the next startup[/COLOR]", nolabel='[B][COLOR red]Don\'t Delete[/COLOR][/B]', yeslabel='[B][COLOR green]Delete Thumbs[/COLOR][/B]')
 	if choice == 1:
-		try: wiz.removeFile(os.join(DATABASE, latest))
+		try: wiz.removeFile(os.path.join(DATABASE, latest))
 		except: wiz.log('Failed to delete, Purging DB.'); wiz.purgeDb(latest)
 		wiz.removeFolder(THUMBS)
-		DTH.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
-		TTH.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
+		xbmcgui.Dialog().notification(ADDONTITLE, '[COLOR %s]Clear Thumbnails: Success![/COLOR]' % COLOR2, ICON, 3000, sound=False)
+		if shortcut is False:
+			DTH.setLabel('Size: [B][COLOR lime]0.0 B[/B][/COLOR]')
+			TTH.setLabel('Files: [B][COLOR lime]0[/B][/COLOR]')
 	else: wiz.log('Clear thumbnames cancelled')
 	wiz.redoThumbs()
 def purgeDb():
@@ -2594,7 +2441,7 @@ def testnotify():
 			id, msg = wiz.splitNotify(NOTIFICATION)
 			if id == False: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Notification: Not Formated Correctly[/COLOR]" % COLOR2); return
 			notify.notification(msg, True)
-		except Exception, e:
+		except Exception as e:
 			wiz.log("Error on Notifications Window: %s" % str(e), xbmc.LOGERROR)
 	else: wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Invalid URL for Notification[/COLOR]" % COLOR2)
 def testupdate():
@@ -2615,13 +2462,14 @@ def testfirstRun():
 def Add_Directory_Item(handle, url, listitem, isFolder):
 	xbmcplugin.addDirectoryItem(handle, url, listitem, isFolder)
 def addDir2(name,url,mode,iconimage,fanart):
-		u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&iconimage="+urllib.quote_plus(iconimage)
+		u=sys.argv[0]+"?url="+urllib.parse.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.parse.quote_plus(name)+"&iconimage="+urllib.parse.quote_plus(iconimage)
 		ok=True
-		liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+		liz=xbmcgui.ListItem(name)
+		liz.setArt({'thumb': 'DefaultFolder.png', 'icon': iconimage, 'fanart': fanart})
 		liz.setInfo( type="Video", infoLabels={ "Title": name, "Plot": name } )
 		liz.setProperty('fanart_image', fanart)
-		ok=xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
-		return ok
+		return xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
+
 def addFolder(type,name,url,mode,iconimage = '',FanArt = '',video = '',description = ''):
 	if type != 'folder2' and type != 'addon':
 		if len(iconimage) > 0:
@@ -2635,25 +2483,27 @@ def addFolder(type,name,url,mode,iconimage = '',FanArt = '',video = '',descripti
 			iconimage = 'none'
 	if FanArt == '':
 		FanArt = FanArt
-	u=sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&FanArt="+urllib.quote_plus(FanArt)+"&video="+urllib.quote_plus(video)+"&description="+urllib.quote_plus(description)
+	u=sys.argv[0]+"?url="+urllib.parse.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.parse.quote_plus(name)+"&FanArt="+urllib.parse.quote_plus(FanArt)+"&video="+urllib.parse.quote_plus(video)+"&description="+urllib.parse.quote_plus(description)
 	ok=True
-	liz=xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=iconimage)
+	liz=xbmcgui.ListItem(name)
+	liz.setArt({'thumb': 'DefaultFolder.png', 'icon': iconimage, 'fanart': FanArt})
 	liz.setInfo( type="Video", infoLabels={ "Title": name, "Plot": description } )
 	liz.setProperty( "FanArt_Image", FanArt )
 	liz.setProperty( "Build.Video", video )
 	if (type=='folder') or (type=='folder2') or (type=='tutorial_folder') or (type=='news_folder'):
-		ok=Add_Directory_Item(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
+		return Add_Directory_Item(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=True)
 	else:
-		ok=Add_Directory_Item(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=False)
+		return Add_Directory_Item(handle=int(sys.argv[1]),url=u,listitem=liz,isFolder=False)
 	return ok
 def addDir(display, mode=None, name=None, url=None, menu=None, description=ADDONTITLE, overwrite=True, fanart=FANART, icon=ICON, themeit=None):
 	u = sys.argv[0]
-	if not mode == None: u += "?mode=%s" % urllib.quote_plus(mode)
-	if not name == None: u += "&name="+urllib.quote_plus(name)
-	if not url == None: u += "&url="+urllib.quote_plus(url)
+	if not mode == None: u += "?mode=%s" % urllib.parse.quote_plus(mode)
+	if not name == None: u += "&name="+urllib.parse.quote_plus(name)
+	if not url == None: u += "&url="+urllib.parse.quote_plus(url)
 	ok=True
 	if themeit: display = themeit % display
-	liz=xbmcgui.ListItem(display, iconImage="DefaultFolder.png", thumbnailImage=icon)
+	liz=xbmcgui.ListItem(display)
+	liz.setArt({'thumb': 'DefaultFolder.png', 'icon': icon, 'fanart': fanart})
 	liz.setInfo( type="Video", infoLabels={ "Title": display, "Plot": description} )
 	liz.setProperty( "Fanart_Image", fanart )
 	if not menu == None: liz.addContextMenuItems(menu, replaceItems=overwrite)
@@ -2661,12 +2511,13 @@ def addDir(display, mode=None, name=None, url=None, menu=None, description=ADDON
 	return ok
 def addFile(display, mode=None, name=None, url=None, menu=None, description=ADDONTITLE, overwrite=True, fanart=FANART, icon=ICON, themeit=None):
 	u = sys.argv[0]
-	if not mode == None: u += "?mode=%s" % urllib.quote_plus(mode)
-	if not name == None: u += "&name="+urllib.quote_plus(name)
-	if not url == None: u += "&url="+urllib.quote_plus(url)
+	if not mode == None: u += "?mode=%s" % urllib.parse.quote_plus(mode)
+	if not name == None: u += "&name="+urllib.parse.quote_plus(name)
+	if not url == None: u += "&url="+urllib.parse.quote_plus(url)
 	ok=True
 	if themeit: display = themeit % display
-	liz=xbmcgui.ListItem(display, iconImage="DefaultFolder.png", thumbnailImage=icon)
+	liz=xbmcgui.ListItem(display)
+	liz.setArt({'icon': 'DefaultFolder.png', 'thumb': icon, 'fanart': fanart})
 	liz.setInfo( type="Video", infoLabels={ "Title": display, "Plot": description} )
 	liz.setProperty( "Fanart_Image", fanart )
 	if not menu == None: liz.addContextMenuItems(menu, replaceItems=overwrite)
@@ -2688,16 +2539,18 @@ def get_params():
 			if (len(splitparams))==2:
 				param[splitparams[0]]=splitparams[1]
 		return param
+'''
 params=get_params()
 url=None
 name=None
 mode=None
-try:     mode=urllib.unquote_plus(params["mode"])
+try:     mode=urllib.parse.unquote_plus(params["mode"])
 except:  pass
-try:     name=urllib.unquote_plus(params["name"])
+try:     name=urllib.parse.unquote_plus(params["name"])
 except:  pass
-try:     url=urllib.unquote_plus(params["url"])
+try:     url=urllib.parse.unquote_plus(params["url"])
 except:  pass
+'''
 
 def setView(content, viewType):
 	if wiz.getS('auto-view')=='true':
@@ -2707,11 +2560,7 @@ def setView(content, viewType):
 		wiz.ebi("Container.SetViewMode(%s)" %  views)
 
 
-#####################################################
-#################  GUI LAYOUT  ######################
-######  Dont be ASSHOLE and claim this  #############
-###########  like you created it!!  #################
-#####################################################
+
 wiz.FTGlog('<Must remain to get any support>')
 FOCUS_BUTTON_COLOR = uservar.FOCUS_BUTTON_COLOR
 DESCOLOR           = uservar.DESCOLOR
@@ -2720,11 +2569,11 @@ MAIN_BUTTONS_TEXT  = uservar.MAIN_BUTTONS_TEXT
 OTHER_BUTTONS_TEXT = uservar.OTHER_BUTTONS_TEXT
 LIST_TEXT          = uservar.LIST_TEXT
 HIGHLIGHT_LIST     = uservar.HIGHLIGHT_LIST
-
-net      = net.Net()
-window   = pyxbmct.AddonDialogWindow('')
+HIGHLIGHT_LIST2     = uservar.HIGHLIGHT_LIST2
+net = net.Net()
+#window = pyxbmct.AddonDialogWindow('')
 EXIT     = os.path.join(ART , '%s.png' % uservar.EXIT_BUTTON_COLOR)
-FBUTTON  = os.path.join(ART , '%s.png' % FOCUS_BUTTON_COLOR) 
+FBUTTON  = os.path.join(ART , 'button_focus.png') 
 LBUTTON  = os.path.join(ART , '%s.png' %  HIGHLIGHT_LIST)
 BUTTON   = os.path.join(ART , 'button.png')
 LISTBG   = os.path.join(ART , 'listbg.png')
@@ -2733,1773 +2582,1682 @@ SpeedBG  = os.path.join(ART , 'speedtest.jpg')
 MAINBG   = os.path.join(ART , 'main.jpg')
 NOTXT    = os.path.join(ART , '%s.gif'% uservar.NO_TXT_FILE)
 
-########
-# TODO #
-########
-# 
-#
-# Fix or add theme and gui install buttons
-#
-# Add cat to apks and addons
-#
-# Add Video Preview Popup
-#
-# 
-#
-#
-#
-#
-#
+
+#####################################################
+#################  GUI LAYOUT  ######################
+######  Dont be an ASSHOLE and claim this  ##########
+###########  like you created it!!  #################
+#####################################################
 
 
+class Guiwiz(pyxbmct.AddonDialogWindow):
+	
+	def __init__(self, title=''):
+		super(Guiwiz, self).__init__(title)
+		self.window()
+		self.main_buttons()
+		self.set_navigation()
+		self.foreground()
+		self.connectEventList(
+			[pyxbmct.ACTION_MOVE_DOWN,
+			pyxbmct.ACTION_MOVE_UP,
+			pyxbmct.ACTION_MOUSE_WHEEL_DOWN,
+			pyxbmct.ACTION_MOUSE_WHEEL_UP,
+			pyxbmct.ACTION_MOUSE_MOVE],
+			self.list_update)
+		self.connect(pyxbmct.ACTION_NAV_BACK, self.close)
+		self.setFocus(self.BuildsButton)
+		self.HIDEALL()
+		self.splash.setVisible(True)
+	
+	def window(self):
+		self.setGeometry(1280, 720, 100, 50)# Create Window (width,height,rows,cols)
+		self.fan=pyxbmct.Image(MAINBG)
+		self.placeControl(self.fan, -10, -6, 125, 62)
+		wiz.FTGlog('Window Opened')
+	
+	def foreground(self):
+		self.listbg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.listbg, 10, 0, 80, 17)
+
+		self.buildbg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.buildbg, 10, 16, 80, 35)
+
+		self.buildinfobg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.buildinfobg, 88, 0, 23, 50)
+
+		self.listbgA = pyxbmct.Image(LISTBG)
+		self.placeControl(self.listbgA, 20, 0, 80, 17)
+
+		self.buildbgA = pyxbmct.Image(LISTBG)
+		self.placeControl(self.buildbgA, 20, 16, 80, 35)
+
+		self.maintbg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.maintbg, 70, 19, 40, 32)
+
+		self.sysinfobg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.sysinfobg, 10, 19, 60, 32)
+
+		self.netinfobg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.netinfobg, 10, 0, 60, 20)
+
+		self.speedthumb = pyxbmct.Image(SpeedBG)
+		self.placeControl(self.speedthumb, 70, 0, 40, 20)
+
+		self.splash = pyxbmct.Image(SPLASH)
+		self.placeControl(self.splash , 10, 1, 100, 48)
+
+		self.bakresbg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.bakresbg , 10, 1, 100, 48)
+
+		self.toolsbg = pyxbmct.Image(LISTBG)
+		self.placeControl(self.toolsbg , 10, 1, 100, 48)
+
+		self.wizinfogb = pyxbmct.Image(LISTBG)
+		self.placeControl(self.wizinfogb, -6, 9, 9, 32)
+
+		self.wiz_title =  pyxbmct.Label('[COLOR %s][B]%s[/B][/COLOR]' % (uservar.WIZTITLE_COLOR ,uservar.WIZTITLE))
+		self.placeControl(self.wiz_title, -5, 11, 7, 20)
+
+		self.wiz_ver =  pyxbmct.Label('[COLOR %s]Version: [COLOR %s][B]%s[/B][/COLOR]' % (uservar.VERTITLE_COLOR,uservar.VER_NUMBER_COLOR,VERSION))
+		self.placeControl(self.wiz_ver, -5, 31, 7, 10)
+
+		self.no_txt = pyxbmct.Image(NOTXT)
+		self.placeControl(self.no_txt, 23, 8, 80, 35)
+		
+	def main_buttons(self):
+		self.BuildsButton= pyxbmct.Button('[COLOR %s][B]Builds[/B][/COLOR]' % MAIN_BUTTONS_TEXT, focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(self.BuildsButton,-2 , 1 , 13, 8)
+		self.connect(self.BuildsButton, lambda: self.BuildList())
+
+		self.MaintButton = pyxbmct.Button('[COLOR %s][B]Maintenance[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(self.MaintButton, 2,11, 9, 8)
+		self.connect(self.MaintButton, lambda: self.Maint())
+
+		self.BackResButton = pyxbmct.Button('[COLOR %s][B]Backup/Restore[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(self.BackResButton, 2, 21, 9, 8)
+		self.connect(self.BackResButton, lambda: self.BackRes())
+
+		self.ToolsButton = pyxbmct.Button('[COLOR %s][B]Tools[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(self.ToolsButton,2 , 31, 9, 8)
+		self.connect(self.ToolsButton, lambda: self.Tools())
+
+		self.InstallablesButton = pyxbmct.Button('[COLOR %s][B]Installables[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		#self.placeControl(self.InstallablesButton,2 , 33, 9, 8)
+		#self.connect(self.InstallablesButton, lambda: Installables())
+
+		self.CloseButton = pyxbmct.Button('[COLOR %s][B]Close[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
+		self.placeControl(self.CloseButton,-2 , 41,13, 8)
+		self.connect(self.CloseButton, self.close)
+	
+	def set_navigation(self):
+		self.BuildsButton.controlRight(self.MaintButton)
+		self.BuildsButton.controlLeft(self.CloseButton)
+
+		self.MaintButton.controlRight(self.BackResButton)
+		self.MaintButton.controlLeft(self.BuildsButton)
+
+		self.BackResButton.controlRight(self.ToolsButton)
+		self.BackResButton.controlLeft(self.MaintButton)
+
+		self.ToolsButton.controlRight(self.CloseButton)  # InstallablesButton if ever fixed
+		self.ToolsButton.controlLeft(self.BackResButton)
+
+		#InstallablesButton.controlRight(CloseButton)
+		#InstallablesButton.controlLeft(ToolsButton)
+
+		self.CloseButton.controlRight(self.BuildsButton)
+		self.CloseButton.controlLeft(self.ToolsButton)  # InstallablesButton if ever fixed
+	
+	def HIDEALL(self):
+		try: Bname.setVisible(False)
+		except:pass
+		try: buildnamelabel.setVisible(False)
+		except:pass
+		try: buildversionlabel.setVisible(False)
+		except:pass
+		try: InstallButtonROM.setVisible(False)
+		except:pass
+		try: InstallButtonEMU.setVisible(False)
+		except:pass
+		try: self.no_txt.setVisible(False)
+		except:pass
+		try: self.splash.setVisible(False)
+		except:pass
+		try: AddonButton.setVisible(False)
+		except:pass
+		try: APKButton.setVisible(False)
+		except:pass
+		try: ROMButton.setVisible(False)
+		except:pass
+		try: EmuButton.setVisible(False)
+		except:pass
+		try: InstallButton.setVisible(False)
+		except:pass
+		try: FreshStartButton.setVisible(False)
+		except:pass
+		try: self.listbg.setVisible(False)
+		except:pass
+		try: self.no_txt.setVisible(False)
+		except:pass
+		try: self.speedthumb.setVisible(False)
+		except:pass
+		try: buildlistmenu.setVisible(False)
+		except:pass
+		#try: PreviewButton.setVisible(False)
+		#except:pass
+		#try: ThemeButton.setVisible(False)
+		#except:pass
+		try: self.buildinfobg.setVisible(False)
+		except:pass
+		try: self.buildbg.setVisible(False)
+		except:pass
+		try: buildthumb.setVisible(False)
+		except:pass
+		try: buildtextbox.setVisible(False)
+		except:pass
+		try: vertextbox .setVisible(False)
+		except:pass
+		try: koditextbox.setVisible(False)
+		except:pass
+		try: desctextbox.setVisible(False)
+		except:pass
+		try: addthumb.setVisible(False)
+		except:pass
+		try: InstallButtonA.setVisible(False)
+		except:pass
+		try: addonlist.setVisible(False)
+		except:pass
+		try: addthumb.setVisible(False)
+		except:pass
+		try: desctextboxA.setVisible(False)
+		except:pass
+		try: addtextbox.setVisible(False)
+		except:pass
+		try: self.listbgA.setVisible(False)
+		except:pass
+		try: self.buildbgA.setVisible(False)
+		except:pass
+		try: apkthumb.setVisible(False)
+		except:pass
+		try: apklist.setVisible(False)
+		except:pass
+		try: apkthumb.setVisible(False)
+		except:pass
+		try: apktextbox.setVisible(False)
+		except:pass
+		try: desctextboxAPK.setVisible(False)
+		except:pass
+		try: InstallButtonAPK.setVisible(False)
+		except:pass
+		try: emulist.setVisible(False)
+		except:pass
+		try: emuthumb.setVisible(False)
+		except:pass
+		try: desctextboxEMU.setVisible(False)
+		except:pass
+		try: emutextbox.setVisible(False)
+		except:pass
+		try: InstallButtonEMU.setVisible(False)
+		except:pass
+		try: romlist.setVisible(False)
+		except:pass
+		try: romthumb.setVisible(False)
+		except:pass
+		try: desctextboxROM.setVisible(False)
+		except:pass
+		try: romtextbox.setVisible(False)
+		except:pass
+		try: InstallButtonROM.setVisible(False)
+		except:pass
+		try: self.maintbg.setVisible(False)
+		except:pass
+		try: total_clean_button.setVisible(False)
+		except:pass
+		try: total_cache_button.setVisible(False)
+		except:pass
+		try: total_packages_button.setVisible(False)
+		except:pass
+		try: total_thumbnails_button.setVisible(False)
+		except:pass
+		try: TC.setVisible(False)
+		except:pass
+		try: DC.setVisible(False)
+		except:pass
+		try: DPK.setVisible(False)
+		except:pass
+		try: DTH.setVisible(False)
+		except:pass
+		try: TPK.setVisible(False)
+		except:pass
+		try: TTH.setVisible(False)
+		except:pass
+		try: self.sysinfobg.setVisible(False)
+		except:pass
+		try: speedtest_button.setVisible(False)
+		except:pass
+		try: sysinfo_title.setVisible(False)
+		except:pass
+		try: version1.setVisible(False)
+		except:pass
+		try: store.setVisible(False)
+		except:pass
+		try: rom_used.setVisible(False)
+		except:pass
+		try: rom_free.setVisible(False)
+		except:pass
+		try: rom_total.setVisible(False)
+		except:pass
+		try: mem.setVisible(False)
+		except:pass
+		try: ram_used.setVisible(False)
+		except:pass
+		try: ram_free.setVisible(False)
+		except:pass
+		try: ram_total.setVisible(False)
+		except:pass
+		try: kodi.setVisible(False)
+		except:pass
+		try: total.setVisible(False)
+		except:pass
+		try: video.setVisible(False)
+		except:pass
+		try: program.setVisible(False)
+		except:pass
+		try: music.setVisible(False)
+		except:pass
+		try: picture.setVisible(False)
+		except:pass
+		try: repos.setVisible(False)
+		except:pass
+		try: skins.setVisible(False)
+		except:pass
+		try: scripts.setVisible(False)
+		except:pass
+		try: self.netinfobg.setVisible(False)
+		except:pass
+		try: netinfo_title.setVisible(False)
+		except:pass
+		try: un_hide_net.setVisible(False)
+		except:pass
+		try: settings_button1.setVisible(False)
+		except:pass
+		try: MAC.setVisible(False)
+		except:pass
+		try: INTER_IP.setVisible(False)
+		except:pass
+		try: IP.setVisible(False)
+		except:pass
+		try: ISP.setVisible(False)
+		except:pass
+		try: CITY.setVisible(False)
+		except:pass
+		try: STATE.setVisible(False)
+		except:pass
+		try: COUNTRY.setVisible(False)
+		except:pass
+		try: self.bakresbg.setVisible(False)
+		except:pass
+		try: favs.setVisible(False)
+		except:pass
+		try: backuploc.setVisible(False)
+		except:pass
+		try: Backup.setVisible(False)
+		except:pass
+		try: backup_build_button.setVisible(False)
+		except:pass
+		try: backup_gui_button.setVisible(False)
+		except:pass
+		try: backup_addondata_button.setVisible(False)
+		except:pass
+		try: restore_build_button.setVisible(False)
+		except:pass
+		try: restore_gui_button.setVisible(False)
+		except:pass
+		try: restore_addondata_button.setVisible(False)
+		except:pass
+		try: clear_backup_button.setVisible(False)
+		except:pass
+		try: savefav_button.setVisible(False)
+		except:pass
+		try: restorefav_button.setVisible(False)
+		except:pass
+		try: clearfav_button.setVisible(False)
+		except:pass
+		try: backupaddonpack_button.setVisible(False)
+		except:pass
+		try: restore_title.setVisible(False)
+		except:pass
+		try: delete_title.setVisible(False)
+		except:pass
+		try: set_title.setVisible(False)
+		except:pass
+		try: settings_button.setVisible(False)
+		except:pass
+		try: view_error_button.setVisible(False)
+		except:pass
+		try: full_log_button.setVisible(False)
+		except:pass
+		try: upload_log_button.setVisible(False)
+		except:pass
+		try: removeaddons_button.setVisible(False)
+		except:pass
+		try: removeaddondata_all_button.setVisible(False)
+		except:pass
+		try: removeaddondata_u_button.setVisible(False)
+		except:pass
+		try: removeaddondata_e_button.setVisible(False)
+		except:pass
+		try: checksources_button.setVisible(False)
+		except:pass
+		try: checkrepos_button.setVisible(False)
+		except:pass
+		try: forceupdate_button.setVisible(False)
+		except:pass
+		try: fixaddonupdate_button.setVisible(False)
+		except:pass
+		try: Addon.setVisible(False)
+		except:pass
+		try: scan.setVisible(False)
+		except:pass
+		try: fix.setVisible(False)
+		except:pass
+		try: delet.setVisible(False)
+		except:pass
+		try: delet1.setVisible(False)
+		except:pass
+		try: Log_title.setVisible(False)
+		except:pass
+		try: self.toolsbg.setVisible(False)
+		except:pass
+		try: Log_errors.setVisible(False)
+		except:pass
+		try: WhiteList.setVisible(False)
+		except:pass
+		try: whitelist_edit_button.setVisible(False)
+		except:pass
+		try: whitelist_view_button.setVisible(False)
+		except:pass
+		try: whitelist_clear_button.setVisible(False)
+		except:pass
+		try: whitelist_import_button.setVisible(False)
+		except:pass
+		try: whitelist_export_button.setVisible(False)
+		except:pass
+		try: Advan.setVisible(False)
+		except:pass
+		try: autoadvanced_buttonQ.setVisible(False)
+		except:pass
+		try: autoadvanced_button.setVisible(False)
+		except:pass
+		try: currentsettings_button.setVisible(False)
+		except:pass
+		try: removeadvanced_button.setVisible(False)
+		except:pass
+		try: self.buildversionlabel.setVisible(False)
+		except:pass
+		try: buildthemelabel.setVisible(False)
+		except:pass
+		try: skinname.setVisible(False)
+		except:pass
+		try: errorinstall.setVisible(False)
+		except:pass
+		try: lastupdatchk.setVisible(False)
+		except:pass
+	
+	def runspeedtest(self):
+		from resources.libs import speedtest  # filepath: d:\Server_Repo_Wiz\HOPE_THIS_ WORKS\plugin.program.thehermit\default.py
+		speed = speedtest.speedtest()
+		self.speedthumb.setImage(speed[0])
+
+	def list_update(self):
+		global Bname
+		global url
+		global name
+		global plugin
+		try:
+			if self.getFocus() == buildlistmenu:
+				pos = buildlistmenu.getSelectedPosition()
+				link = net.http_GET(BUILDFILE).content.replace('\n', '').replace('\r', '')
+				url = re.compile('url="(.+?)"').findall(link)[pos]
+				name = re.compile('name="(.+?)"').findall(link)[pos]
+				buildpic = re.compile('icon="(.+?)"').findall(link)[pos]
+				Bversion = re.compile('version="(.+?)"').findall(link)[pos]
+				kodivers = re.compile('kodi="(.+?)"').findall(link)[pos]
+				description = re.compile('description="(.+?)"').findall(link)[pos]
+				buildtextbox.setLabel('[COLOR %s]Build Selected: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+				vertextbox.setLabel('[COLOR %s]Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, Bversion))
+				koditextbox.setLabel('[COLOR %s]Kodi Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, kodivers))
+				desctextbox.setText('[COLOR %s]Build Description: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, description))
+				buildthumb.setImage(buildpic)
+				Cname = buildlistmenu.getListItem(buildlistmenu.getSelectedPosition()).getLabel()
+				Bname = wiz.stripcolortags(Cname)
+		except:
+			pass
+		try:
+			if self.getFocus() == addonlist:
+				pos = addonlist.getSelectedPosition()
+				link = net.http_GET(ADDONFILE).content.replace('\n', '').replace('\r', '')
+				addpic = re.compile('icon="(.+?)"').findall(link)[pos]
+				url = re.compile('url="(.+?)"').findall(link)[pos]
+				name = re.compile('name="(.+?)"').findall(link)[pos]
+				description = re.compile('description="(.+?)"').findall(link)[pos]
+				plugin = re.compile('plugin="(.+?)"').findall(link)[pos]
+				addtextbox.setLabel('[COLOR %s]Addon Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+				desctextboxA.setText('[COLOR %s]Addon Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, description))
+				addthumb.setImage(addpic)
+				Cname = addonlist.getListItem(addonlist.getSelectedPosition()).getLabel()
+				name = wiz.stripcolortags(Cname)
+		except:
+			pass
+		try:
+			if self.getFocus() == apklist:
+				pos = apklist.getSelectedPosition(name, url)
+				link = net.http_GET(APKFILE).content.replace('\n', '').replace('\r', '')
+				apkpic = re.compile('icon="(.+?)"').findall(link)[pos]
+				url = re.compile('url="(.+?)"').findall(link)[pos]
+				name = re.compile('name="(.+?)"').findall(link)[pos]
+				description = re.compile('description="(.+?)"').findall(link)[pos]
+				apktextbox.setLabel('[COLOR %s]APK Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+				desctextboxAPK.setText('[COLOR %s]APK Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, description))
+				apkthumb.setImage(apkpic)
+				Cname = apklist.getListItem(apklist.getSelectedPosition()).getLabel()
+				name = wiz.stripcolortags(Cname)
+		except:
+			pass
+		try:
+			if self.getFocus() == emulist:
+				pos = emulist.getSelectedPosition(name, url)
+				link = net.http_GET(EMUAPKS).content.replace('\n', '').replace('\r', '')
+				emupic = re.compile('icon="(.+?)"').findall(link)[pos]
+				url = re.compile('url="(.+?)"').findall(link)[pos]
+				name = re.compile('name="(.+?)"').findall(link)[pos]
+				description = re.compile('description="(.+?)"').findall(link)[pos]
+				emutextbox.setLabel('[COLOR %s]EMU Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+				desctextboxEMU.setText('[COLOR %s]EMU Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, description))
+				emuthumb.setImage(emupic)
+		except:
+			pass
+		try:
+			if self.getFocus() == romlist:
+				pos = romlist.getSelectedPosition(name, url)
+				link = net.http_GET(ROMPACK).content.replace('\n', '').replace('\r', '')
+				emupic = re.compile('icon="(.+?)"').findall(link)[pos]
+				url = re.compile('url="(.+?)"').findall(link)[pos]
+				name = re.compile('name="(.+?)"').findall(link)[pos]
+				description = re.compile('description="(.+?)"').findall(link)[pos]
+				romtextbox.setLabel('[COLOR %s]ROM PACK Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+				desctextboxROM.setText('[COLOR %s]ROM PACK Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR, DESCOLOR, description))
+				romthumb.setImage(emupic)
+		except:
+			pass
 
 
-def playVideoB(url):
-	if 'watch?v=' in url:
-		a, b = url.split('?')
-		find = b.split('&')
-		for item in find:
-			if item.startswith('v='):
-				url = item[2:]
-				break
-			else: continue
-	elif 'embed' in url or 'youtu.be' in url:
-		a = url.split('/')
-		if len(a[-1]) > 5:
-			url = a[-1]
-		elif len(a[-2]) > 5:
-			url = a[-2]
-	wiz.log("YouTube URL: %s" % url)
-	notify.Preview(url)
+	def BuildList(self):
+		global InstallButton
+		global FreshStartButton
+		global buildlist
+		global buildlistmenu
+		global buildthumb
+		global buildtextbox
+		global vertextbox 
+		global koditextbox
+		global desctextbox
+		global no_txt
+		global buildnamelabel
+		global buildversionlabel
+		global buildthemelabel
+		global skinname
+		global errorinstall
+		global lastupdatchk
+		#global Bname
+		global PreviewButton
+		#global ThemeButton
+		
+		self.HIDEALL()
+		if not BUILDFILE == 'http://' and not BUILDFILE == '':
+			self.listbg.setVisible(True)
+			self.buildbg.setVisible(True)
+			self.buildinfobg.setVisible(True)
+		
+			#PreviewButton = pyxbmct.Button('[COLOR %s][B]Video Preview[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			#self.placeControl(PreviewButton,20 , 20, 8, 8)
+			#self.connect(PreviewButton,lambda: buildVideo(Bname))
+		
+			InstallButton = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(InstallButton,28 , 20, 8, 8)
+			self.connect(InstallButton, lambda: buildWizard(Bname,'normal'))
+		
+			FreshStartButton = pyxbmct.Button('[COLOR %s][B]Fresh Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(FreshStartButton,36 , 20, 8, 8)
+			self.connect(FreshStartButton,lambda: buildWizard(Bname,'fresh'))
+		
+			#ThemeButton = pyxbmct.Button('[COLOR %s][B]Install Themes[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			#self.placeControl(ThemeButton,44 , 20, 8, 8)
+			#self.connect(ThemeButton,lambda: buildWizard(Bname,'theme'))
+		
+			buildthumb = pyxbmct.Image(ICON)
+			self.placeControl(buildthumb, 21, 30, 45, 19)
+		
+			buildlistmenu = pyxbmct.List(buttonFocusTexture=os.path.join(ART , '%s.png' %  HIGHLIGHT_LIST2))
+			self.placeControl(buildlistmenu, 14, 1, 79, 15)
+		
+			buildtextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(buildtextbox, 13, 20, 10, 25)
+		
+			vertextbox   = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(vertextbox, 60, 20, 10, 15)
+		
+			koditextbox  = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(koditextbox, 65, 20, 10, 15)
+		
+			desctextbox = pyxbmct.TextBox()
+			self.placeControl(desctextbox, 70, 20, 17, 30)
+			desctextbox.autoScroll(1100, 1100, 1100)
+		
+			buildname1 = ADDON.getSetting('buildname')
+			buildversion1 = ADDON.getSetting('buildversion')
+			defaultskinname1 = ADDON.getSetting('defaultskinname')
+			buildtheme1 = ADDON.getSetting('buildtheme')
+			errors1 = ADDON.getSetting('errors')
+			lastbuildcheck1 = ADDON.getSetting('lastbuildcheck')
+		
+			if buildname1 == '' : buildname = None 
+			else:buildname = ADDON.getSetting('buildname')
+		
+			if buildversion1 == '' : buildversion = None 
+			else:buildversion = ADDON.getSetting('buildversion')
+		
+			if defaultskinname1 == '' : defaultskinname = None 
+			else:defaultskinname = ADDON.getSetting('defaultskinname')
+		
+			if buildtheme1 == '' : buildtheme = None 
+			else:buildtheme = ADDON.getSetting('buildtheme')
+		
+			if errors1 == '' : errors = None 
+			else:errors = ADDON.getSetting('errors')
+		
+			if lastbuildcheck1 == '' : lastbuildcheck = None 
+			else:lastbuildcheck = ADDON.getSetting('lastbuildcheck')
+		
+			buildnamelabel  = pyxbmct.Label('[COLOR %s]Current Build Name: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildname))
+			self.placeControl(buildnamelabel, 90, 2, 8, 25)
+		
+			buildversionlabel  = pyxbmct.Label('[COLOR %s]Current Build Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildversion))
+			self.placeControl(buildversionlabel, 95, 2, 8, 20)
+		
+			skinname  = pyxbmct.Label('[COLOR %s]Build Skin Name: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,defaultskinname))
+			self.placeControl(skinname, 100, 2, 11, 20)
+		
+			buildthemelabel  = pyxbmct.Label('[COLOR %s]Build Theme: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildtheme))
+			self.placeControl(buildthemelabel, 90, 28, 8, 21)
+		
+			errorinstall  = pyxbmct.Label('[COLOR %s]Errors During Install: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,errors))
+			self.placeControl(errorinstall, 95, 28, 8, 20)
+		
+			lastupdatchk  = pyxbmct.Label('[COLOR %s]Last Update Check: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,lastbuildcheck))
+			self.placeControl(lastupdatchk, 100, 28, 8, 20)
+		
+			buildlistmenu.reset()
+			buildlistmenu.setVisible(True)
+			buildthumb.setVisible(True)
 
-def runspeedtest():
-	speed = speedtest.speedtest()
-	speedthumb.setImage(speed[0])
-
-def HIDEALL():
-	try:
-		InstallButtonROM.setVisible(False)
-	except:pass
-	try:
-		InstallButtonEMU.setVisible(False)
-	except:pass
-	try:
-		no_txt.setVisible(False)
-	except:pass
-	try:
-		splash.setVisible(False)
-	except:pass
-	try:
-		AddonButton.setVisible(False)
-	except:pass
-	try:
-		APKButton.setVisible(False)
-	except:pass
-	try:
-		ROMButton.setVisible(False)
-	except:pass
-	try:
-		EmuButton.setVisible(False)
-	except:pass
-	try:
-		InstallButton.setVisible(False)
-	except:pass
-	try:
-		FreshStartButton.setVisible(False)
-	except:pass
-	try:
-		listbg.setVisible(False)
-	except:pass
-	try:
-		no_txt.setVisible(False)
-	except:pass
-	try:
-		splash.setVisible(False)
-	except:pass
-	try:
-		speedthumb.setVisible(False)
-	except:pass
-	try:
-		buildlist.setVisible(False)
-	except:pass
-	try:
-		PreviewButton.setVisible(False)
-	except:pass
-	try:
-		ThemeButton.setVisible(False)
-	except:pass
-	try:
-		buildinfobg.setVisible(False)
-	except:pass
-	try:
-		buildbg.setVisible(False)
-	except:pass
-	try:
-		buildthumb.setVisible(False)
-	except:pass
-	try:
-		buildtextbox.setVisible(False)
-	except:pass
-	try:
-		vertextbox .setVisible(False)
-	except:pass
-	try:
-		koditextbox.setVisible(False)
-	except:pass
-	try:
-		desctextbox.setVisible(False)
-	except:pass
-	try:
-		addthumb.setVisible(False)
-	except:pass
-	try:
-		InstallButtonA.setVisible(False)
-	except:pass
-	try:
-		addonlist.setVisible(False)
-	except:pass
-	try:
-		addthumb.setVisible(False)
-	except:pass
-	try:
-		desctextboxA.setVisible(False)
-	except:pass
-	try:
-		addtextbox.setVisible(False)
-	except:pass
-	try:
-		listbgA.setVisible(False)
-	except:pass
-	try:
-		buildbgA.setVisible(False)
-	except:pass
-	try:
-		apkthumb.setVisible(False)
-	except:pass
-	try:
-		apklist.setVisible(False)
-	except:pass
-	try:
-		apkthumb.setVisible(False)
-	except:pass
-	try:
-		apktextbox.setVisible(False)
-	except:pass
-	try:
-		desctextboxAPK.setVisible(False)
-	except:pass
-	try:
-		InstallButtonAPK.setVisible(False)
-	except:pass
-	try:
-		emulist.setVisible(False)
-	except:pass
-	try:
-		emuthumb.setVisible(False)
-	except:pass
-	try:
-		desctextboxEMU.setVisible(False)
-	except:pass
-	try:
-		emutextbox.setVisible(False)
-	except:pass
-	try:
-		InstallButtonEMU.setVisible(False)
-	except:pass
-	try:
-		romlist.setVisible(False)
-	except:pass
-	try:
-		romthumb.setVisible(False)
-	except:pass
-	try:
-		desctextboxROM.setVisible(False)
-	except:pass
-	try:
-		romtextbox.setVisible(False)
-	except:pass
-	try:
-		InstallButtonROM.setVisible(False)
-	except:pass
-	try:
-		maintbg.setVisible(False)
-	except:pass
-	try:
-		total_clean_button.setVisible(False)
-	except:pass
-	try:
-		total_cache_button.setVisible(False)
-	except:pass
-	try:
-		total_packages_button.setVisible(False)
-	except:pass
-	try:
-		total_thumbnails_button.setVisible(False)
-	except:pass
-	try:
-		TC.setVisible(False)
-	except:pass
-	try:
-		DC.setVisible(False)
-	except:pass
-	try:
-		DPK.setVisible(False)
-	except:pass
-	try:
-		DTH.setVisible(False)
-	except:pass
-	try:
-		TPK.setVisible(False)
-	except:pass
-	try:
-		TTH.setVisible(False)
-	except:pass
-	try:
-		sysinfobg.setVisible(False)
-	except:pass
-	try:
-		speedtest_button.setVisible(False)
-	except:pass
-	try:
-		sysinfo_title.setVisible(False)
-	except:pass
-	try:
-		version1.setVisible(False)
-	except:pass
-	try:
-		store.setVisible(False)
-	except:pass
-	try:
-		rom_used.setVisible(False)
-	except:pass
-	try:
-		rom_free.setVisible(False)
-	except:pass
-	try:
-		rom_total.setVisible(False)
-	except:pass
-	try:
-		mem.setVisible(False)
-	except:pass
-	try:
-		ram_used.setVisible(False)
-	except:pass
-	try:
-		ram_free.setVisible(False)
-	except:pass
-	try:
-		ram_total.setVisible(False)
-	except:pass
-	try:
-		kodi.setVisible(False)
-	except:pass
-	try:
-		total.setVisible(False)
-	except:pass
-	try:
-		video.setVisible(False)
-	except:pass
-	try:
-		program.setVisible(False)
-	except:pass
-	try:
-		music.setVisible(False)
-	except:pass
-	try:
-		picture.setVisible(False)
-	except:pass
-	try:
-		repos.setVisible(False)
-	except:pass
-	try:
-		skins.setVisible(False)
-	except:pass
-	try:
-		scripts.setVisible(False)
-	except:pass
-	try:
-		netinfobg.setVisible(False)
-	except:pass
-	try:
-		netinfo_title.setVisible(False)
-	except:pass
-	try:
-		un_hide_net.setVisible(False)
-	except:pass
-	try:
-		settings_button1.setVisible(False)
-	except:pass
-	try:
-		trigger_title.setVisible(False)
-	except:pass
-	try:
-		MAC.setVisible(False)
-	except:pass
-	try:
-		INTER_IP.setVisible(False)
-	except:pass
-	try:
-		IP.setVisible(False)
-	except:pass
-	try:
-		ISP.setVisible(False)
-	except:pass
-	try:
-		CITY.setVisible(False)
-	except:pass
-	try:
-		STATE.setVisible(False)
-	except:pass
-	try:
-		COUNTRY.setVisible(False)
-	except:pass
-	try:
-		bakresbg.setVisible(False)
-	except:pass
-	try:
-		favs.setVisible(False)
-	except:pass
-	try:
-		backuploc.setVisible(False)
-	except:pass
-	try:
-		Backup.setVisible(False)
-	except:pass
-	try:
-		backup_build_button.setVisible(False)
-	except:pass
-	try:
-		backup_gui_button.setVisible(False)
-	except:pass
-	try:
-		backup_addondata_button.setVisible(False)
-	except:pass
-	try:
-		restore_build_button.setVisible(False)
-	except:pass
-	try:
-		restore_gui_button.setVisible(False)
-	except:pass
-	try:
-		restore_addondata_button.setVisible(False)
-	except:pass
-	try:
-		clear_backup_button.setVisible(False)
-	except:pass
-	try:
-		savefav_button.setVisible(False)
-	except:pass
-	try:
-		restorefav_button.setVisible(False)
-	except:pass
-	try:
-		clearfav_button.setVisible(False)
-	except:pass
-	try:
-		backupaddonpack_button.setVisible(False)
-	except:pass
-	try:
-		restore_title.setVisible(False)
-	except:pass
-	try:
-		delete_title.setVisible(False)
-	except:pass
-	try:
-		set_title.setVisible(False)
-	except:pass
-	try:
-		settings_button.setVisible(False)
-	except:pass
-	try:
-		view_error_button.setVisible(False)
-	except:pass
-	try:
-		full_log_button.setVisible(False)
-	except:pass
-	try:
-		upload_log_button.setVisible(False)
-	except:pass
-	try:
-		removeaddons_button.setVisible(False)
-	except:pass
-	try:
-		removeaddondata_all_button.setVisible(False)
-	except:pass
-	try:
-		removeaddondata_u_button.setVisible(False)
-	except:pass
-	try:
-		removeaddondata_e_button.setVisible(False)
-	except:pass
-	try:
-		checksources_button.setVisible(False)
-	except:pass
-	try:
-		checkrepos_button.setVisible(False)
-	except:pass
-	try:
-		forceupdate_button.setVisible(False)
-	except:pass
-	try:
-		fixaddonupdate_button.setVisible(False)
-	except:pass
-	try:
-		Addon.setVisible(False)
-	except:pass
-	try:
-		scan.setVisible(False)
-	except:pass
-	try:
-		fix.setVisible(False)
-	except:pass
-	try:
-		delet.setVisible(False)
-	except:pass
-	try:
-		delet1.setVisible(False)
-	except:pass
-	try:
-		Log_title.setVisible(False)
-	except:pass
-	try:
-		toolsbg.setVisible(False)
-	except:pass
-	try:
-		Log_errors.setVisible(False)
-	except:pass
-	try:
-		WhiteList.setVisible(False)
-	except:pass
-	try:
-		whitelist_edit_button.setVisible(False)
-	except:pass
-	try:
-		whitelist_view_button.setVisible(False)
-	except:pass
-	try:
-		whitelist_clear_button.setVisible(False)
-	except:pass
-	try:
-		whitelist_import_button.setVisible(False)
-	except:pass
-	try:
-		whitelist_export_button.setVisible(False)
-	except:pass
-	try:
-		Advan.setVisible(False)
-	except:pass
-	try:
-		autoadvanced_buttonQ.setVisible(False)
-	except:pass
-	try:
-		autoadvanced_button.setVisible(False)
-	except:pass
-	try:
-		currentsettings_button.setVisible(False)
-	except:pass
-	try:
-		removeadvanced_button.setVisible(False)
-	except:pass
-	try:
-		buildname.setVisible(False)
-	except:pass
-	try:
-		buildversion.setVisible(False)
-	except:pass
-	try:
-		buildtheme.setVisible(False)
-	except:pass
-	try:
-		skinname.setVisible(False)
-	except:pass
-	try:
-		errorinstall.setVisible(False)
-	except:pass
-	try:
-		lastupdatchk.setVisible(False)
-	except:pass
-
-def list_update():
-	global Bname
-	global url
-	global name
-	global plugin
-	try:
-		if window.getFocus() == buildlist:
-			pos=buildlist.getSelectedPosition()
+			InstallButton.setVisible(True)
+			FreshStartButton.setVisible(True)
+			buildtextbox.setVisible(True)
+			vertextbox.setVisible(True)
+			koditextbox.setVisible(True)
+			desctextbox.setVisible(True)
+		
+			buildnamelabel.setVisible(True)
+			buildversionlabel.setVisible(True)
+			buildthemelabel.setVisible(True)
+			skinname.setVisible(True)
+			errorinstall.setVisible(True)
+			lastupdatchk.setVisible(True)
+		
+			buildthumb.setImage(ICON)
 			link = net.http_GET(BUILDFILE).content.replace('\n','').replace('\r','')
-			url = re.compile('url="(.+?)"').findall(link)[pos]
-			name = re.compile('name="(.+?)"').findall(link)[pos]
-			buildpic = re.compile('icon="(.+?)"').findall(link)[pos]
-			Bversion = re.compile('version="(.+?)"').findall(link)[pos]
-			kodivers = re.compile('kodi="(.+?)"').findall(link)[pos]
-			description = re.compile('description="(.+?)"').findall(link)[pos]
-			buildtextbox.setLabel('[COLOR %s]Build Selected: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR, name))
-			vertextbox.setLabel('[COLOR %s]Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR, Bversion))
-			koditextbox.setLabel('[COLOR %s]Kodi Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,kodivers))
-			desctextbox.setText('[COLOR %s]Build Description: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,description))
-			buildthumb.setImage(buildpic)
-			Cname = buildlist.getListItem(buildlist.getSelectedPosition()).getLabel()
-			Bname = wiz.stripcolortags(Cname)
-	except:pass
-	try:
-		if window.getFocus() == addonlist:
-			pos=addonlist.getSelectedPosition()
+			match = re.compile('name="(.+?)"').findall(link)
+			for name in match:
+				name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
+				buildlistmenu.addItem(name)
+	
+			self.BuildsButton.controlUp(buildlistmenu)
+			self.BuildsButton.controlDown(buildlistmenu)
+		
+			buildlistmenu.controlRight(InstallButton)  # PreviewButton when fixed
+			buildlistmenu.controlUp(self.BuildsButton)
+		
+			#PreviewButton.controlDown(InstallButton)
+			#PreviewButton.controlUp(self.BuildsButton)
+			#PreviewButton.controlLeft(buildlistmenu)
+		
+			InstallButton.controlDown(FreshStartButton)
+			InstallButton.controlUp(self.BuildsButton)  # PreviewButton when fixed
+			InstallButton.controlLeft(buildlistmenu)
+		
+			#FreshStartButton.controlDown(ThemeButton)
+			FreshStartButton.controlUp(InstallButton)
+			FreshStartButton.controlLeft(buildlistmenu)
+			#ThemeButton.controlUp(FreshStartButton)
+			#ThemeButton.controlLeft(buildlistmenu)
+	
+		else:
+			self.no_txt.setVisible(True)
+			wiz.FTGlog('No Build txt')
+
+
+	def AddonList(self):
+		global InstallButtonA
+		global addonlist
+		global addthumb
+		global desctextboxA
+		global addtextbox
+		global no_txt
+		global url
+		global name
+	
+		self.HIDEALL()
+		if not ADDONFILE == 'http://' and not ADDONFILE == '':
+		
+			self.listbgA.setVisible(True)
+			self.buildbgA.setVisible(True)
+		
+			#buttons/objects
+			InstallButtonA = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(InstallButtonA,30 , 20, 9, 8)
+		
+			self.connect(InstallButtonA, lambda: self.AddonInstall(name))#addonInstaller(plugin, url))
+		
+			addthumb=pyxbmct.Image(ICON)
+			self.placeControl(addthumb, 31, 30, 45, 19)
+		
+			addonlist = pyxbmct.List(buttonFocusTexture=LBUTTON)
+			self.placeControl(addonlist, 24, 1, 79, 15)
+		
+			addtextbox   = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(addtextbox, 24, 20, 10, 25)
+			
+			desctextboxA = pyxbmct.TextBox()
+			self.placeControl(desctextboxA, 80, 20, 17, 30)
+			desctextboxA.autoScroll(1100, 1100, 1100)
+		
+			addonlist.reset()
+			addonlist.setVisible(True)
+			addthumb.setVisible(True)
+		
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+
+			InstallButtonA.setVisible(True)
+			addtextbox.setVisible(True)
+			desctextboxA.setVisible(True)
+		
+			addthumb.setImage(ICON)
 			link = net.http_GET(ADDONFILE).content.replace('\n','').replace('\r','')
-			addpic = re.compile('icon="(.+?)"').findall(link)[pos]
-			url = re.compile('url="(.+?)"').findall(link)[pos]
-			name = re.compile('name="(.+?)"').findall(link)[pos]
-			description = re.compile('description="(.+?)"').findall(link)[pos]
-			plugin = re.compile('plugin="(.+?)"').findall(link)[pos]
-			addtextbox.setLabel('[COLOR %s]Addon Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,name))
-			desctextboxA.setText('[COLOR %s]Addon Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,description))
-			addthumb.setImage(addpic)
-			Cname = addonlist.getListItem(addonlist.getSelectedPosition()).getLabel()
-			name = wiz.stripcolortags(Cname)
-	except:pass
-	try:
-		if window.getFocus() == apklist:
-			pos=apklist.getSelectedPosition(name,url)
+			match = re.compile('name="(.+?)"').findall(link)
+			for name in match:
+				name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
+				addonlist.addItem(name)
+		
+			AddonButton.controlDown(addonlist)
+		
+			addonlist.controlRight(InstallButtonA)
+			addonlist.controlUp(AddonButton)
+		
+			InstallButtonA.controlLeft(addonlist)
+			InstallButtonA.controlUp(AddonButton)
+		
+		else:
+			self.no_txt.setVisible(True)
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+			wiz.FTGlog('No Addon txt')
+
+
+	def APKList(self):
+		global InstallButtonAPK
+		global apklist
+		global apkthumb
+		global desctextboxAPK
+		global apktextbox
+		global no_txt
+
+		self.HIDEALL()
+		if not APKFILE == 'http://' and not APKFILE == '':
+		
+			self.listbgA.setVisible(True)
+			self.buildbgA.setVisible(True)
+		
+			InstallButtonAPK = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(InstallButtonAPK,30 , 20, 9, 8)
+			self.connect(InstallButtonAPK, lambda: apkInstaller1(name, url))
+		
+			apkthumb=pyxbmct.Image(ICON)
+			self.placeControl(apkthumb, 31, 30, 45, 19)
+		
+			apklist = pyxbmct.List(buttonFocusTexture=LBUTTON)
+			self.placeControl(apklist, 24, 1, 79, 15)
+		
+			apktextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(apktextbox, 24, 20, 10, 25)
+		
+			desctextboxAPK = pyxbmct.TextBox()
+			self.placeControl(desctextboxAPK, 80, 20, 17, 30)
+			desctextboxAPK.autoScroll(1100, 1100, 1100)
+	
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+		
+			apklist.reset()
+			apklist.setVisible(True)
+			apkthumb.setVisible(True)
+			InstallButtonAPK.setVisible(True)
+			apktextbox.setVisible(True)
+			desctextboxAPK.setVisible(True)
+		
+			apkthumb.setImage(ICON)
 			link = net.http_GET(APKFILE).content.replace('\n','').replace('\r','')
-			apkpic = re.compile('icon="(.+?)"').findall(link)[pos]
-			url = re.compile('url="(.+?)"').findall(link)[pos]
-			name = re.compile('name="(.+?)"').findall(link)[pos]
-			description = re.compile('description="(.+?)"').findall(link)[pos]
-			apktextbox.setLabel('[COLOR %s]APK Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,name))
-			desctextboxAPK.setText('[COLOR %s]APK Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,description))
-			apkthumb.setImage(apkpic)
-			Cname = apklist.getListItem(apklist.getSelectedPosition()).getLabel()
-			name = wiz.stripcolortags(Cname)
-	except:pass
-	try:
-		if window.getFocus() == emulist:
-			pos=emulist.getSelectedPosition(name,url)
+			match = re.compile('name="(.+?)"').findall(link)
+			for name in match:
+				name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
+				apklist.addItem(name)
+		
+			APKButton.controlDown(apklist)
+		
+			apklist.controlRight(InstallButtonAPK)
+			apklist.controlUp(APKButton)
+		
+			InstallButtonAPK.controlLeft(apklist)
+			InstallButtonAPK.controlUp(APKButton)
+		else:
+			self.no_txt.setVisible(True)
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+			wiz.FTGlog('No APK txt')
+
+	def EmuList(self):
+		global emulist
+		global emuthumb
+		global desctextboxEMU
+		global emutextbox
+		global InstallButtonEMU
+		global no_txt
+
+		self.HIDEALL()
+		if not EMUAPKS == 'http://' and not EMUAPKS == '':
+		
+			self.listbgA.setVisible(True)
+			self.buildbgA.setVisible(True)
+		
+			InstallButtonEMU = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(InstallButtonEMU,30 , 20, 9, 8)
+			self.connect(InstallButtonEMU, lambda: apkInstaller1(name, url))
+		
+			emulist = pyxbmct.List(buttonFocusTexture=LBUTTON)
+			self.placeControl(emulist, 24, 1, 79, 15)
+		
+			emuthumb=pyxbmct.Image(ICON)
+			self.placeControl(emuthumb, 31, 30, 45, 19)
+		
+			emutextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(emutextbox, 24, 20, 10, 25)
+		
+			desctextboxEMU = pyxbmct.TextBox()
+			self.placeControl(desctextboxEMU, 80, 20, 17, 30)
+			desctextboxEMU.autoScroll(1100, 1100, 1100)
+		
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+			emulist.setVisible(True)
+			desctextboxEMU.setVisible(True)
+			emutextbox.setVisible(True)
+			InstallButtonEMU.setVisible(True)
+			emulist.reset()
+			emulist.setVisible(True)
+			emuthumb.setVisible(True)
 			link = net.http_GET(EMUAPKS).content.replace('\n','').replace('\r','')
-			emupic = re.compile('icon="(.+?)"').findall(link)[pos]
-			url = re.compile('url="(.+?)"').findall(link)[pos]
-			name = re.compile('name="(.+?)"').findall(link)[pos]
-			description = re.compile('description="(.+?)"').findall(link)[pos]
-			emutextbox.setLabel('[COLOR %s]EMU Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,name))
-			desctextboxEMU.setText('[COLOR %s]EMU Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,description))
-			emuthumb.setImage(emupic)
-	except:pass
-	try:
-		if window.getFocus() == romlist:
-			pos=romlist.getSelectedPosition(name,url)
+			match = re.compile('name="(.+?)"').findall(link)
+			for name in match:
+				name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
+				emulist.addItem(name)
+		
+			EmuButton.controlDown(emulist)
+		
+			emulist.controlRight(InstallButtonEMU)
+			emulist.controlUp(EmuButton)
+		
+			InstallButtonEMU.controlLeft(emulist)
+			InstallButtonEMU.controlUp(EmuButton)
+		else:
+			self.no_txt.setVisible(True)
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+			wiz.FTGlog('No EMU txt')
+
+	def RomList(self):
+		global romlist 
+		global romthumb
+		global desctextboxROM
+		global romtextbox
+		global InstallButtonROM
+		global no_txt
+	
+		self.HIDEALL()
+		if not ROMPACK == 'http://' and not ROMPACK == '':
+		
+			self.listbgA.setVisible(True)
+			self.buildbgA.setVisible(True)
+		
+			InstallButtonROM = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+			self.placeControl(InstallButtonROM,30 , 20, 9, 8)
+			self.connect(InstallButtonROM, lambda: UNZIPROM())
+		
+			romlist = pyxbmct.List(buttonFocusTexture=LBUTTON)
+			self.placeControl(romlist, 24, 1, 79, 15)
+		
+			romthumb=pyxbmct.Image(ICON)
+			self.placeControl(romthumb, 31, 30, 45, 19)
+		
+			romtextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
+			self.placeControl(romtextbox, 24, 20, 10, 25)
+			desctextboxROM = pyxbmct.TextBox()
+			self.placeControl(desctextboxROM, 80, 20, 17, 30)
+			desctextboxROM.autoScroll(1100, 1100, 1100)
+		
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+		
+			romlist.setVisible(True)
+			romthumb.setVisible(True)
+			desctextboxROM.setVisible(True)
+			romtextbox.setVisible(True)
+			InstallButtonROM.setVisible(True)
+		
+			romlist.reset()
+			romlist.setVisible(True)
+
 			link = net.http_GET(ROMPACK).content.replace('\n','').replace('\r','')
-			emupic = re.compile('icon="(.+?)"').findall(link)[pos]
-			url = re.compile('url="(.+?)"').findall(link)[pos]
-			name = re.compile('name="(.+?)"').findall(link)[pos]
-			description = re.compile('description="(.+?)"').findall(link)[pos]
-			romtextbox.setLabel('[COLOR %s]ROM PACK Selected:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,name))
-			desctextboxROM.setText('[COLOR %s]ROM PACK Description:[COLOR %s] %s[/COLOR]' % (DES_T_COLOR,DESCOLOR,description))
-			romthumb.setImage(emupic)
-	except:pass
+			match = re.compile('name="(.+?)"').findall(link)
+			for name in match:
+				name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
+				romlist.addItem(name)
+		
+			ROMButton.controlDown(romlist)
+		
+			romlist.controlRight(InstallButtonROM)
+			romlist.controlUp(ROMButton)
+		
+			InstallButtonROM.controlLeft(romlist)
+			InstallButtonROM.controlUp(ROMButton)
+		else:
+			self.no_txt.setVisible(True)
+			AddonButton.setVisible(True)
+			APKButton.setVisible(True)
+			ROMButton.setVisible(True)
+			EmuButton.setVisible(True)
+			wiz.FTGlog('No ROM txt')
 
-def BuildList():
-	global InstallButton
-	global FreshStartButton
-	global buildlist
-	global buildthumb
-	global buildtextbox
-	global vertextbox 
-	global koditextbox
-	global desctextbox
-	global no_txt
-	global buildname
-	global buildversion
-	global buildtheme
-	global skinname
-	global errorinstall
-	global lastupdatchk
-	global Bname
-	global PreviewButton
-	global ThemeButton
+	def Un_Hide_Net(self):
+		mac,inter_ip,ip,city,state,country,isp = wiz.net_info()
+		MAC.setLabel('[COLOR %s]Mac:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, mac))
+		INTER_IP.setLabel('[COLOR %s]Internal IP: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,inter_ip))
+		IP.setLabel('[COLOR %s]External IP:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,ip))
+		CITY.setLabel('[COLOR %s]City:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,city))
+		STATE.setLabel('[COLOR %s]State:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,state))
+		COUNTRY.setLabel('[COLOR %s]Country:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,country))
+		ISP.setLabel('[COLOR %s]ISP:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,isp))
 
+	def Maint(self):
+		self.HIDEALL()
+		global total_clean_button
+		global total_cache_button
+		global total_packages_button
+		global total_thumbnails_button
+		global TC
+		global DC
+		global DPK
+		global DTH
+		global TPK
+		global TTH
+		global speedtest_button
+		global sysinfo_title
+		global version1
+		global store
+		global rom_used
+		global rom_free
+		global rom_total
+		global mem
+		global ram_used
+		global ram_free
+		global ram_total
+		global kodi
+		global total
+		global video
+		global program
+		global music
+		global picture
+		global repos
+		global skins
+		global scripts
+	
+		self.sysinfobg.setVisible(True)
+		self.maintbg.setVisible(True)
+		self.speedthumb.setVisible(True)
+		self.netinfobg.setVisible(True)
+		sizepack   = wiz.getSize(PACKAGES)
+		totalpack   = wiz.getTotal(PACKAGES)
+		sizethumb  = wiz.getSize(THUMBS)
+		totalthumb   = wiz.getTotal(THUMBS)
+		sizecache  = wiz.getCacheSize()
+		totalsize  = sizepack+sizethumb+sizecache
+		picture, music, video, programs, repos, scripts, skins, codename, version, name,storage_free ,storage_used, storage_total, ram_free, ram_used, ram_total = wiz.SYSINFO()
+	
+		##sysinfo
+	
+		sysinfo_title =  pyxbmct.Label('[COLOR %s][B]SYSTEM INFO[/B][/COLOR]' % DES_T_COLOR)
+		self.placeControl(sysinfo_title, 12, 31, 10, 15)
+		version1 =  pyxbmct.Label('[COLOR %s]Version:[/COLOR] [COLOR %s]%s[/COLOR] - [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, codename, DESCOLOR, version))
+		self.placeControl(version1, 18, 37, 10, 15)
+		store = pyxbmct.Label('[B][COLOR %s]Storage[/COLOR][/B]'% DESCOLOR)
+		self.placeControl(store, 23, 39, 10, 10)
+		rom_used=pyxbmct.Label('[COLOR %s]Used:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_free))
+		self.placeControl(rom_used, 28, 39, 10, 10)
+		rom_free=pyxbmct.Label('[COLOR %s]Free:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_used))
+		self.placeControl(rom_free, 32, 39, 10, 10)
+		rom_total=pyxbmct.Label('[COLOR %s]Total:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_total))
+		self.placeControl(rom_total, 37, 39, 10, 10)
+		mem = pyxbmct.Label('[B][COLOR %s]Memory[/COLOR][/B]' % DESCOLOR)
+		self.placeControl(mem, 43, 39, 10, 10)
+		### Hello, how are you
+		ram_used=pyxbmct.Label('[COLOR %s]Used:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_used))
+		self.placeControl(ram_used, 48, 39, 10, 10)
+		ram_free=pyxbmct.Label('[COLOR %s]Free:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_free))
+		self.placeControl(ram_free, 53, 39, 10, 10)
+		ram_total=pyxbmct.Label('[COLOR %s]Total:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_total))
+		self.placeControl(ram_total, 58, 39, 10, 10)
+	
+		##addon info
+	
+		kodi = pyxbmct.Label('[COLOR %s]Name:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
+		self.placeControl(kodi, 17, 22, 10, 15)
+		totalcount = len(picture) + len(music) + len(video) + len(programs) + len(scripts) + len(skins) + len(repos) 
+		total = pyxbmct.Label('[COLOR %s]Addons Total: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, totalcount))
+		self.placeControl(total, 22, 22, 10, 10)
+		video=pyxbmct.Label('[COLOR %s]Video Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(video))))
+		self.placeControl(video, 27, 22, 10, 10)
+		program=pyxbmct.Label('[COLOR %s]Program Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(programs))))
+		self.placeControl(program, 33, 22, 10, 10)
+		music=pyxbmct.Label('[COLOR %s]Music Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(music))))
+		self.placeControl(music, 37, 22, 10, 10)
+		picture=pyxbmct.Label('[COLOR %s]Picture Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(picture))))
+		self.placeControl(picture, 42, 22, 10, 10)
+		repos=pyxbmct.Label('[COLOR %s]Repositories:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(repos))))
+		self.placeControl(repos, 47, 22, 10, 10)
+		skins=pyxbmct.Label('[COLOR %s]Skins: [/COLOR][COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(skins))))
+		self.placeControl(skins, 52, 22, 10, 10)
+		scripts=pyxbmct.Label('[COLOR %s]Scripts/Modules:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(scripts))))
+		self.placeControl(scripts, 57, 22, 10, 10)
+	
+		global MAC
+		global INTER_IP
+		global IP
+		global CITY
+		global STATE
+		global COUNTRY
+		global ISP
+		global netinfo_title
+		global un_hide_net
+		global settings_button1
+	
+		###NET INFO
+	
+		netinfo_title =  pyxbmct.Label('[COLOR %s][B]NETWORK INFO[/B][/COLOR]'% DES_T_COLOR)
+		self.placeControl(netinfo_title, 12, 7, 10, 20)
+		MAC = pyxbmct.Label('[COLOR %s]Mac:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(MAC, 18 , 1 ,  10, 18)
+		INTER_IP = pyxbmct.Label('[COLOR %s]Internal IP: [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(INTER_IP, 23 , 1 ,  10, 18)
+		IP = pyxbmct.Label('[COLOR %s]External IP:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(IP, 28 , 1 ,  10, 18)
+		CITY = pyxbmct.Label('[COLOR %s]City:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(CITY, 33 , 1 ,  10, 18)
+		STATE = pyxbmct.Label('[COLOR %s]State:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(STATE, 38 , 1 ,  10, 18)
+		COUNTRY = pyxbmct.Label('[COLOR %s]Country:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(COUNTRY, 43 , 1 ,  10, 18)
+		ISP = pyxbmct.Label('[COLOR %s]ISP:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
+		self.placeControl(ISP, 48 , 1 ,  10, 18)
+	
+		#maint lables#
+		TC = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(totalsize)))
+		self.placeControl(TC, 80 , 21 ,  10, 9)
+		DC = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizecache)))
+		self.placeControl(DC, 96 , 21 ,  10, 9)
+		DPK = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizepack)))
+		self.placeControl(DPK, 96 , 31 ,  10, 9)
+		TPK = pyxbmct.Label('[COLOR %s]Files:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,totalpack))
+		self.placeControl(TPK, 101 , 31 ,  10, 9)
+		DTH = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizethumb)))
+		self.placeControl(DTH, 96 , 41 ,  10, 9)
+		TTH = pyxbmct.Label('[COLOR %s]Files:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,totalthumb))
+		self.placeControl(TTH, 101 , 41 ,  10, 9)
+	
+		#buttons#
+		total_clean_button = pyxbmct.Button('[COLOR %s]Total Clean Up[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(total_clean_button, 72 , 21 ,  9, 8)
+		self.connect(total_clean_button,lambda: totalClean())
+		### I'm good, u?
+		total_cache_button = pyxbmct.Button('[COLOR %s]Delete Cache[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(total_cache_button, 87 , 21 ,  9, 9)
+		self.connect(total_cache_button,lambda: clearCache())
+	
+		total_packages_button = pyxbmct.Button('[COLOR %s]Delete Packages[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(total_packages_button, 87 , 31 ,  9, 9)
+		self.connect(total_packages_button,lambda: clearPackages())
+	
+		total_thumbnails_button = pyxbmct.Button('[COLOR %s]Delete Thumbnails[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(total_thumbnails_button, 87 , 41 ,  9, 9)
+		self.connect(total_thumbnails_button, lambda: clearThumb(type=None))
+	
+		speedtest_button = pyxbmct.Button('[COLOR %s]Speed Test[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(speedtest_button, 58 , 1 ,  9, 8)
+		self.connect(speedtest_button, lambda: self.runspeedtest())
+	
+		un_hide_net = pyxbmct.Button('[COLOR %s]Show Net Info[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(un_hide_net, 58, 10, 9, 8)
+		self.connect(un_hide_net, lambda: self.Un_Hide_Net())
+	
+		settings_button1 = pyxbmct.Button('[COLOR %s]Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(settings_button1, 72 , 41 ,  9, 8)
+		self.connect(settings_button1, lambda: wiz.openS('Maintenance'))
 
-	HIDEALL()
-	if not BUILDFILE == 'http://' and not BUILDFILE == '':
-		
-		listbg.setVisible(True)
-		buildbg.setVisible(True)
-		buildinfobg.setVisible(True)
-		
-		PreviewButton = pyxbmct.Button('[COLOR %s][B]Video Preview[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(PreviewButton,20 , 20, 8, 8)
-		window.connect(PreviewButton,lambda: buildVideo(Bname))
-		
-		InstallButton = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(InstallButton,28 , 20, 8, 8)
-		window.connect(InstallButton, lambda: buildWizard(Bname,'normal'))
-		
-		FreshStartButton = pyxbmct.Button('[COLOR %s][B]Fresh Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(FreshStartButton,36 , 20, 8, 8)
-		window.connect(FreshStartButton,lambda: buildWizard(Bname,'fresh'))
-		
-		ThemeButton = pyxbmct.Button('[COLOR %s][B]Install Themes[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(ThemeButton,44 , 20, 8, 8)
-		window.connect(ThemeButton,lambda: buildWizard(Bname,'theme'))
-		
-		buildthumb = pyxbmct.Image(ICON)
-		window.placeControl(buildthumb, 21, 30, 45, 19)
-		
-		buildlist = pyxbmct.List(buttonFocusTexture=LBUTTON)
-		window.placeControl(buildlist, 14, 1, 79, 15)
-		
-		buildtextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(buildtextbox, 13, 20, 10, 25)
-		
-		vertextbox   = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(vertextbox, 60, 20, 10, 15)
-		
-		koditextbox  = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(koditextbox, 65, 20, 10, 15)
-		
-		desctextbox = pyxbmct.TextBox()
-		window.placeControl(desctextbox, 70, 20, 17, 30)
-		desctextbox.autoScroll(1100, 1100, 1100)
-		
-		buildname1 = ADDON.getSetting('buildname')
-		buildversion1 = ADDON.getSetting('buildversion')
-		defaultskinname1 = ADDON.getSetting('defaultskinname')
-		buildtheme1 = ADDON.getSetting('buildtheme')
-		errors1 = ADDON.getSetting('errors')
-		lastbuildcheck1 = ADDON.getSetting('lastbuildcheck')
-		
-		if buildname1 == '' : buildname = None 
-		else:buildname = ADDON.getSetting('buildname')
-		
-		if buildversion1 == '' : buildversion = None 
-		else:buildversion = ADDON.getSetting('buildversion')
-		
-		if defaultskinname1 == '' : defaultskinname = None 
-		else:defaultskinname = ADDON.getSetting('defaultskinname')
-		
-		if buildtheme1 == '' : buildtheme = None 
-		else:buildtheme = ADDON.getSetting('buildtheme')
-		
-		if errors1 == '' : errors = None 
-		else:errors = ADDON.getSetting('errors')
-		
-		if lastbuildcheck1 == '' : lastbuildcheck = None 
-		else:lastbuildcheck = ADDON.getSetting('lastbuildcheck')
-		
-		
-		
-		buildname  = pyxbmct.Label('[COLOR %s]Current Build Name: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildname))
-		window.placeControl(buildname, 90, 2, 8, 25)
-		
-		buildversion  = pyxbmct.Label('[COLOR %s]Current Build Version: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildversion))
-		window.placeControl(buildversion, 95, 2, 8, 20)
-		
-		skinname  = pyxbmct.Label('[COLOR %s]Build Skin Name: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,defaultskinname))
-		window.placeControl(skinname, 100, 2, 11, 20)
-		
-		buildtheme  = pyxbmct.Label('[COLOR %s]Build Theme: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,buildtheme))
-		window.placeControl(buildtheme, 90, 28, 8, 21)
-		
-		errorinstall  = pyxbmct.Label('[COLOR %s]Errors During Install: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,errors))
-		window.placeControl(errorinstall, 95, 28, 8, 20)
-		
-		lastupdatchk  = pyxbmct.Label('[COLOR %s]Last Update Check: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR,DESCOLOR,lastbuildcheck))
-		window.placeControl(lastupdatchk, 100, 28, 8, 20)
-		
-		buildlist.reset()
-		buildlist.setVisible(True)
-		buildthumb.setVisible(True)
+		#self.HIDEALL()
+		self.splash.setVisible(False)
+		total_clean_button.setVisible(True)
+		total_cache_button.setVisible(True)
+		total_packages_button.setVisible(True)
+		total_thumbnails_button.setVisible(True)
+		TC.setVisible(True)
+		DC.setVisible(True)
+		DPK.setVisible(True)
+		DTH.setVisible(True)
+		TPK.setVisible(True)
+		TTH.setVisible(True)
+		speedtest_button.setVisible(True)
+		sysinfo_title.setVisible(True)
+		version1.setVisible(True)
+		store.setVisible(True)
+		rom_used.setVisible(True)
+		rom_free.setVisible(True)
+		rom_total.setVisible(True)
+		mem.setVisible(True)
+		ram_used.setVisible(True)
+		ram_free.setVisible(True)
+		ram_total.setVisible(True)
+		kodi.setVisible(True)
+		total.setVisible(True)
+		video.setVisible(True)
+		program.setVisible(True)
+		music.setVisible(True)
+		picture.setVisible(True)
+		repos.setVisible(True)
+		skins.setVisible(True)
+		scripts.setVisible(True)
+		netinfo_title.setVisible(True)
+		MAC.setVisible(True)
+		un_hide_net.setVisible(True)
+		INTER_IP.setVisible(True)
+		IP.setVisible(True)
+		ISP.setVisible(True)
+		CITY.setVisible(True)
+		STATE.setVisible(True)
+		COUNTRY.setVisible(True)
+		settings_button1.setVisible(True)
+	
+		self.MaintButton.controlDown(speedtest_button)
+	
+		speedtest_button.controlUp(self.MaintButton)
+		speedtest_button.controlDown(total_clean_button)
+		speedtest_button.controlRight(un_hide_net)
+	
+		un_hide_net.controlUp(self.MaintButton)
+		un_hide_net.controlDown(total_clean_button)
+		un_hide_net.controlRight(total_clean_button)
+		un_hide_net.controlLeft(speedtest_button)
+	
+		total_clean_button.controlUp(self.MaintButton)
+		total_clean_button.controlDown(total_cache_button)
+		total_clean_button.controlRight(settings_button1)
+		total_clean_button.controlLeft(un_hide_net)
+	
+		total_cache_button.controlUp(total_clean_button)
+		total_cache_button.controlRight(total_packages_button)
+		total_cache_button.controlLeft(un_hide_net)
+	
+		total_packages_button.controlUp(settings_button1)
+		total_packages_button.controlRight(total_thumbnails_button)
+		total_packages_button.controlLeft(total_cache_button)
+	
+		total_thumbnails_button.controlUp(settings_button1)
+		total_thumbnails_button.controlLeft(total_packages_button)
+	
+		settings_button1.controlUp(self.MaintButton)
+		settings_button1.controlDown(total_thumbnails_button)
+		settings_button1.controlLeft(total_clean_button)
 
-		InstallButton.setVisible(True)
-		FreshStartButton.setVisible(True)
-		buildtextbox.setVisible(True)
-		vertextbox.setVisible(True)
-		koditextbox.setVisible(True)
-		desctextbox.setVisible(True)
-		
-		buildname.setVisible(True)
-		buildversion.setVisible(True)
-		buildtheme.setVisible(True)
-		skinname.setVisible(True)
-		errorinstall.setVisible(True)
-		lastupdatchk.setVisible(True)
-		
-		buildthumb.setImage(ICON)
-		link = net.http_GET(BUILDFILE).content.replace('\n','').replace('\r','')
-		match = re.compile('name="(.+?)"').findall(link)
-		for name in match:
-			name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
-			buildlist.addItem(name)
+	def BackRes(self):
+		self.HIDEALL()
+		global favs
+		global backuploc
+		global Backup
+		global backup_build_button
+		global backup_gui_button
+		global backup_addondata_button
+		global restore_build_button
+		global restore_gui_button
+		global restore_addondata_button
+		global clear_backup_button
+		global savefav_button
+		global restorefav_button
+		global clearfav_button
+		global backupaddonpack_button
+		global restore_title
+		global delete_title
+		global set_title
+		global settings_button
 	
-		BuildsButton.controlUp(buildlist)
-		BuildsButton.controlDown(buildlist)
+		self.bakresbg.setVisible(True)
+	
+		last = str(FAVSsave) if not FAVSsave == '' else 'Favourites hasnt been saved yet.'
+		#loc info#
+	
+		favs = pyxbmct.Label('[B][COLOR %s]Last Save:[/COLOR] [COLOR %s]%s[/COLOR][/B]' % (DES_T_COLOR, DESCOLOR,str(last)))
+		self.placeControl(favs, 14, 3, 10, 30)
+	
+		backuploc = pyxbmct.Label('[B][COLOR %s]Back-Up Location: [COLOR %s]%s[/COLOR][/B]' % (DES_T_COLOR, DESCOLOR, MYBUILDS))
+		self.placeControl(backuploc, 22, 3, 10, 30)
+	
+		#backup#
+		Backup = pyxbmct.Label('[B][COLOR %s]Backup Tools:[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(Backup, 32, 3, 10, 10)
+	
+		backup_build_button = pyxbmct.Button('[COLOR %s] Build[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(backup_build_button, 42, 3, 10, 10)
+		self.connect(backup_build_button,lambda: wiz.backUpOptions('build'))
+	
+		backup_gui_button = pyxbmct.Button('[COLOR %s] GUI[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(backup_gui_button, 52, 3, 10, 10)
+		self.connect(backup_gui_button,lambda: wiz.backUpOptions('guifix'))
 		
-		buildlist.controlRight(PreviewButton)
-		buildlist.controlUp(BuildsButton)
-		
-		PreviewButton.controlDown(InstallButton)
-		PreviewButton.controlUp(BuildsButton)
-		PreviewButton.controlLeft(buildlist)
-		
-		InstallButton.controlDown(FreshStartButton)
-		InstallButton.controlUp(PreviewButton)
-		InstallButton.controlLeft(buildlist)
-		
-		FreshStartButton.controlDown(ThemeButton)
-		FreshStartButton.controlUp(InstallButton)
-		FreshStartButton.controlLeft(buildlist)
-		
-		
-		ThemeButton.controlUp(FreshStartButton)
-		ThemeButton.controlLeft(buildlist)
-	else:
-		no_txt.setVisible(True)
-		wiz.FTGlog('No Build txt')
+		backupaddonpack_button = pyxbmct.Button('[COLOR %s] Addon Pack[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(backupaddonpack_button, 62, 3, 10, 10)
+		self.connect(backupaddonpack_button,lambda: wiz.backUpOptions('addon pack'))
+		# I'm ok, thanks for asking
+		backup_addondata_button = pyxbmct.Button('[COLOR %s] Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(backup_addondata_button, 72, 3, 10, 10)
+		self.connect(backup_addondata_button,lambda: wiz.backUpOptions('addondata'))
+	
+		savefav_button = pyxbmct.Button('[COLOR %s] Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(savefav_button, 82, 3, 10, 10)
+		self.connect(savefav_button,lambda: wiz.BACKUPFAV())
+	
+		#restore#
+		restore_title = pyxbmct.Label('[B][COLOR %s]Restore Tools:[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(restore_title, 32, 20, 10, 10)
+	
+		restore_build_button = pyxbmct.Button('[COLOR %s]Build/Pack[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(restore_build_button, 42, 20, 10, 10)
+		self.connect(restore_build_button,lambda: restoreit('build'))
+	
+		restore_gui_button = pyxbmct.Button('[COLOR %s]GUI[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(restore_gui_button, 52, 20, 10, 10)
+		self.connect(restore_gui_button,lambda: restoreit('gui'))
+		### Nope not here
+		restore_addondata_button = pyxbmct.Button('[COLOR %s]Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(restore_addondata_button, 62, 20, 10, 10)
+		self.connect(restore_addondata_button,lambda: restoreit('addondata'))
+	
+		restorefav_button = pyxbmct.Button('[COLOR %s]Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(restorefav_button, 72, 20, 10, 10)
+		self.connect(restorefav_button,lambda: wiz.RESTOREFAV())
+	
+		#clear backups#
+		delete_title = pyxbmct.Label('[B][COLOR red]Delete Tools:[/COLOR][/B]')
+		self.placeControl(delete_title, 54, 37, 10, 10)
+	
+		clearfav_button = pyxbmct.Button('[COLOR %s]Clear Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(clearfav_button, 64, 37, 10, 10)
+		self.connect(clearfav_button,lambda: wiz.DELFAV())
+	
+		clear_backup_button = pyxbmct.Button('[COLOR %s]Clear Back-ups[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(clear_backup_button, 74, 37, 10, 10)
+		self.connect(clear_backup_button,lambda: wiz.cleanupBackup())
+	
+		#settings
+		set_title = pyxbmct.Label('[B][COLOR %s]Settings:[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(set_title, 32, 37, 10, 10)
+	
+		settings_button = pyxbmct.Button('[COLOR %s]Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(settings_button, 42, 37, 10, 10)
+		self.connect(settings_button, lambda: wiz.openS('Maintenance'))
+	
+		favs.setVisible(True)
+		backuploc.setVisible(True)
+		Backup.setVisible(True)
+		backup_build_button.setVisible(True)
+		backup_gui_button.setVisible(True)
+		backup_addondata_button.setVisible(True)
+		restore_build_button.setVisible(True)
+		restore_gui_button.setVisible(True)
+		restore_addondata_button.setVisible(True)
+		clear_backup_button.setVisible(True)
+		savefav_button.setVisible(True)
+		restorefav_button.setVisible(True)
+		clearfav_button.setVisible(True)
+		backupaddonpack_button.setVisible(True)
+		restore_title.setVisible(True)
+		delete_title.setVisible(True)
+		set_title.setVisible(True)
+		settings_button.setVisible(True)
+	
+		self.BackResButton.controlDown(backup_build_button)
 
-def AddonInstall(name):
-	link = wiz.openURL(ADDONFILE).replace('\n','').replace('\r','').replace('\t','').replace('repository=""', 'repository="none"').replace('repositoryurl=""', 'repositoryurl="http://"').replace('repositoryxml=""', 'repositoryxml="http://"')
-	match = re.compile('name="%s".+?lugin="(.+?)".+?rl="(.+?)".+?epository="(.+?)".+?epositoryxml="(.+?)".+?epositoryurl="(.+?)".+?con="(.+?)".+?anart="(.+?)".+?dult="(.+?)".+?escription="(.+?)"' % name).findall(link)
-	if len(match) > 0:
-		x = 0
-		for plugin, aurl, repository, repositoryxml, repositoryurl, icon, fanart, adult, description in match:
-			if plugin.lower() == 'skin':
-				skinInstaller(name, url)
-			elif plugin.lower() == 'pack':
-				packInstaller(name, url)
-			else:
-				addonInstaller(plugin, url)
+		backup_build_button.controlUp(self.BackResButton)
+		backup_build_button.controlDown(backup_gui_button)
+		backup_build_button.controlRight(restore_build_button)
 
-def APKinstall(name):
-	apk = name
-	url = checkAPK(name, 'url')
-	apkInstaller1(apk, url)
+		backup_gui_button.controlUp(backup_build_button)
+		backup_gui_button.controlDown(backupaddonpack_button)
+		backup_gui_button.controlRight(restore_gui_button)
+	
+		backupaddonpack_button.controlUp(backup_gui_button)
+		backupaddonpack_button.controlDown(backup_addondata_button)
+		backupaddonpack_button.controlRight(restore_addondata_button)
+	
+		backup_addondata_button.controlUp(backupaddonpack_button)
+		backup_addondata_button.controlDown(savefav_button)
+		backup_addondata_button.controlRight(restorefav_button)
+		
+		savefav_button.controlUp(backup_addondata_button)
+		savefav_button.controlRight(restorefav_button)
 
-def AddonList():
-	global InstallButtonA
-	global addonlist
-	global addthumb
-	global desctextboxA
-	global addtextbox
-	global no_txt
-	global url
-	global name
-	
-	HIDEALL()
-	if not ADDONFILE == 'http://' and not ADDONFILE == '':
-		
-		listbgA.setVisible(True)
-		buildbgA.setVisible(True)
-		
-		#buttons/objects
-		InstallButtonA = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(InstallButtonA,30 , 20, 9, 8)
-		
-		window.connect(InstallButtonA, lambda:AddonInstall(name))#addonInstaller(plugin, url))
-		
-		addthumb=pyxbmct.Image(ICON)
-		window.placeControl(addthumb, 31, 30, 45, 19)
-		
-		addonlist = pyxbmct.List(buttonFocusTexture=LBUTTON)
-		window.placeControl(addonlist, 24, 1, 79, 15)
-		
-		addtextbox   = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(addtextbox, 24, 20, 10, 25)
-		
-		desctextboxA = pyxbmct.TextBox()
-		window.placeControl(desctextboxA, 80, 20, 17, 30)
-		desctextboxA.autoScroll(1100, 1100, 1100)
-		
-		addonlist.reset()
-		addonlist.setVisible(True)
-		addthumb.setVisible(True)
-		
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
+		restore_build_button.controlUp(self.BackResButton)
+		restore_build_button.controlDown(restore_gui_button)
+		restore_build_button.controlRight(settings_button)
+		restore_build_button.controlLeft(backup_build_button)
 
-		InstallButtonA.setVisible(True)
-		addtextbox.setVisible(True)
-		desctextboxA.setVisible(True)
+		restore_gui_button.controlUp(restore_build_button)
+		restore_gui_button.controlDown(restore_addondata_button)
+		restore_gui_button.controlRight(settings_button)
+		restore_gui_button.controlLeft(backup_gui_button)
+
+		restore_addondata_button.controlUp(restore_gui_button)
+		restore_addondata_button.controlDown(restorefav_button)
+		restore_addondata_button.controlRight(clearfav_button)
+		restore_addondata_button.controlLeft(backupaddonpack_button)
+
+		restorefav_button.controlUp(restore_addondata_button)
+		restorefav_button.controlRight(clear_backup_button)
+		restorefav_button.controlLeft(backup_addondata_button)
+
+		settings_button.controlUp(self.BackResButton)
+		settings_button.controlDown(clearfav_button)
+		settings_button.controlLeft(restore_build_button)
+
+		clearfav_button.controlUp(settings_button)
+		clearfav_button.controlDown(clear_backup_button)
+		clearfav_button.controlLeft(restore_addondata_button)
+
+		clear_backup_button.controlUp(clearfav_button)
+		clear_backup_button.controlLeft(restorefav_button)
+
+	def Tools(self):
+		self.HIDEALL()
+	
+		global view_error_button
+		global full_log_button
+		global upload_log_button
+		global Log_title
+		global Log_errors
+	
+		self.toolsbg.setVisible(True)
+	
+		Log_title = pyxbmct.Label('[B][COLOR %s]Logging Tools[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(Log_title, 15, 4, 10, 10)
+	
+		Log_errors = pyxbmct.Label('[COLOR %s][B]Errors in Log:[/B][/COLOR] %s' % (OTHER_BUTTONS_TEXT, log_tools()))
+		self.placeControl(Log_errors, 22, 4, 10, 15)
+		## uhhh not here
+		view_error_button = pyxbmct.Button('[COLOR %s]View Errors[/COLOR]'% OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(view_error_button, 31, 4, 9, 9)
+		self.connect(view_error_button, lambda: errorChecking(log=None, count=None, last=None))
+	
+		full_log_button = pyxbmct.Button('[COLOR %s]View Full Log[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(full_log_button, 40, 4, 9, 9)
+		self.connect(full_log_button,lambda : LogViewer())
+	
+		upload_log_button = pyxbmct.Button('[COLOR %s]Upload Full Log[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(upload_log_button, 49, 4, 9, 9)
+		self.connect(upload_log_button,lambda : uploadLog.Main())
+	
+		#Addon#
+	
+		global removeaddons_button
+		global removeaddondata_u_button
+		global removeaddondata_e_button
+		global checksources_button
+		global checkrepos_button
+		global forceupdate_button
+		global fixaddonupdate_button
+		global removeaddondata_all_button
+		global scan
+		global fix
+		global delet
+		global delet1
+		global Addon
+	
+		Addon = pyxbmct.Label('[B][COLOR %s]Addon Tools[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(Addon, 69, 21, 9, 9)
+		#buttons#
+		scan = pyxbmct.Label('[B][COLOR %s]Scan For:[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(scan, 75, 4, 9, 10)
+	
+		checksources_button = pyxbmct.Button('[COLOR %s]Broken Sources[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(checksources_button, 82, 3, 9, 10)
+		self.connect(checksources_button,lambda: wiz.checkSources())
+	
+		checkrepos_button = pyxbmct.Button('[COLOR %s]Broken Repositories[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(checkrepos_button, 92, 3, 9, 10)
+		self.connect(checkrepos_button,lambda: wiz.checkRepos())
+	
+		fix = pyxbmct.Label('[B][COLOR %s]Force / Fix:[/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(fix, 75, 16, 9, 10)
+	
+		forceupdate_button = pyxbmct.Button('[COLOR %s]Update Addons[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(forceupdate_button, 82, 15, 9, 9)
+		self.connect(forceupdate_button,lambda: wiz.forceUpdate())
+	
+		fixaddonupdate_button = pyxbmct.Button('[COLOR %s]Enable Disabled Addons[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(fixaddonupdate_button, 92, 15, 9, 9)
+		from resources.libs import addons_enable
+		self.connect(fixaddonupdate_button,lambda: addons_enable.enable_addons())
+		### I see you looking
+		delet = pyxbmct.Label('[B][COLOR %s]Delete: [/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(delet, 75, 28, 9, 10)
+	
+		removeaddons_button = pyxbmct.Button('[COLOR %s]Delete Selected Addons[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(removeaddons_button, 82, 26, 9, 9)
+		self.connect(removeaddons_button,lambda: removeAddonMenu())
+	
+		removeaddondata_all_button = pyxbmct.Button('[COLOR %s]All Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(removeaddondata_all_button, 92, 26, 9, 9)
+		self.connect(removeaddondata_all_button,lambda: removeAddonData('all'))
+	
+		delet1 = pyxbmct.Label('[B][COLOR %s]Delete: [/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(delet1, 75, 39, 9, 10)
+	
+		removeaddondata_u_button = pyxbmct.Button('[COLOR %s]Uninstalled Folders[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(removeaddondata_u_button, 82, 37, 9, 9)
+		self.connect(removeaddondata_u_button,lambda: removeAddonData('uninstalled'))
+	
+		removeaddondata_e_button = pyxbmct.Button('[COLOR %s]Empty Folders[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(removeaddondata_e_button, 92, 37, 9, 9)
+		self.connect(removeaddondata_e_button,lambda: removeAddonData('empty'))
+	
+		####White List###
+		global WhiteList
+		global whitelist_edit_button
+		global whitelist_view_button
+		global whitelist_clear_button
+		global whitelist_import_button
+		global whitelist_export_button
+	
+	
+		WhiteList = pyxbmct.Label('[B][COLOR %s]White List Tools: [/COLOR][/B]' % DES_T_COLOR)
+		self.placeControl(WhiteList, 15, 36, 9, 9)
+	
+		whitelist_edit_button = pyxbmct.Button('[COLOR %s]WhiteList: Edit[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(whitelist_edit_button, 22, 36, 9, 9)
+		self.connect(whitelist_edit_button,lambda: wiz.whiteList('edit'))
+	
+		whitelist_view_button = pyxbmct.Button('[COLOR %s]WhiteList: View[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(whitelist_view_button, 31, 36, 9, 9)
+		self.connect(whitelist_view_button,lambda: wiz.whiteList('view'))
+	
+		whitelist_clear_button = pyxbmct.Button('[COLOR %s]WhiteList: Clear[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(whitelist_clear_button, 40, 36, 9, 9)
+		self.connect(whitelist_clear_button,lambda: wiz.whiteList('clear'))
+		### It's not here
+		whitelist_import_button = pyxbmct.Button('[COLOR %s]WhiteList: Import[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(whitelist_import_button, 49, 36, 9, 9)
+		self.connect(whitelist_import_button,lambda: wiz.whiteList('import'))
+	
+		whitelist_export_button = pyxbmct.Button('[COLOR %s]WhiteList: Export[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(whitelist_export_button, 58, 36, 9, 9)
+		self.connect(whitelist_export_button,lambda: wiz.whiteList('export'))
+	
+		########  Advanced ########
+		global Advan
+		global autoadvanced_buttonQ
+		global autoadvanced_button
+		global currentsettings_button
+		global removeadvanced_button
+	
+		Advan = pyxbmct.Label('[B][COLOR %s]Advanced Settings Tools[/COLOR][/B]'% DES_T_COLOR)
+		self.placeControl(Advan, 15, 20, 9, 13)
+		#buttons#
+		autoadvanced_buttonQ = pyxbmct.Button('[COLOR %s]Quick Config[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(autoadvanced_buttonQ, 22, 21, 9, 9)
+		self.connect(autoadvanced_buttonQ,lambda: notify.simple_advanced())
+	
+		autoadvanced_button = pyxbmct.Button('[COLOR %s]Full Config[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(autoadvanced_button, 31, 21, 9, 9)
+		self.connect(autoadvanced_button,lambda: notify.autoConfig())
+		##Wait it's here!!
+		currentsettings_button = pyxbmct.Button('[COLOR %s]Current Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(currentsettings_button, 40, 21, 9, 9)
+		self.connect(currentsettings_button,lambda: viewAdvanced())
+	
+		removeadvanced_button = pyxbmct.Button('[COLOR %s]Delete Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(removeadvanced_button, 49, 21, 9, 9)
+		self.connect(removeadvanced_button,lambda: removeAdvanced())
+
+		view_error_button.setVisible(True)
+		full_log_button.setVisible(True)
+		upload_log_button.setVisible(True)
 		
-		addthumb.setImage(ICON)
-		link = net.http_GET(ADDONFILE).content.replace('\n','').replace('\r','')
-		match = re.compile('name="(.+?)"').findall(link)
-		for name in match:
-			name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
-			addonlist.addItem(name)
-		
-		AddonButton.controlDown(addonlist)
-		
-		addonlist.controlRight(InstallButtonA)
-		addonlist.controlUp(AddonButton)
-		
-		InstallButtonA.controlLeft(addonlist)
-		InstallButtonA.controlUp(AddonButton)
-		
-		
+		removeaddons_button.setVisible(True)
+		removeaddondata_all_button.setVisible(True)
+		removeaddondata_u_button.setVisible(True)
+		removeaddondata_e_button.setVisible(True)
+	
+		checksources_button.setVisible(True)
+		checkrepos_button.setVisible(True)
+		forceupdate_button.setVisible(True)
+		fixaddonupdate_button.setVisible(True)
+	
+		Log_title.setVisible(True)
+		Log_errors.setVisible(True)
+	
+		Addon.setVisible(True)
+		scan.setVisible(True)
+		fix.setVisible(True)
+		delet.setVisible(True)
+		delet1.setVisible(True)
+		WhiteList.setVisible(True)
+	
+		whitelist_edit_button.setVisible(True)
+		whitelist_view_button.setVisible(True)
+		whitelist_clear_button.setVisible(True)
+		whitelist_import_button.setVisible(True)
+		whitelist_export_button.setVisible(True)
+	
+		Advan.setVisible(True)
+		autoadvanced_buttonQ.setVisible(True)
+		autoadvanced_button.setVisible(True)
+		currentsettings_button.setVisible(True)
+		removeadvanced_button.setVisible(True)
+	
+		self.ToolsButton.controlDown(view_error_button)
+	
+		view_error_button.controlUp(self.ToolsButton)
+		view_error_button.controlDown(full_log_button)
+		view_error_button.controlRight(autoadvanced_button)
 
-	else:
-		no_txt.setVisible(True)
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		wiz.FTGlog('No Addon txt')
+		full_log_button.controlUp(view_error_button)
+		full_log_button.controlDown(upload_log_button)
+		full_log_button.controlRight(currentsettings_button)
 
-def APKList():
-	global InstallButtonAPK
-	global apklist
-	global apkthumb
-	global desctextboxAPK
-	global apktextbox
-	global no_txt
+		upload_log_button.controlUp(full_log_button)
+		upload_log_button.controlDown(checksources_button)
+		upload_log_button.controlRight(removeadvanced_button)
 
-	HIDEALL()
-	if not APKFILE == 'http://' and not APKFILE == '':
-		
-		listbgA.setVisible(True)
-		buildbgA.setVisible(True)
-		
-		InstallButtonAPK = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(InstallButtonAPK,30 , 20, 9, 8)
-		window.connect(InstallButtonAPK, lambda:apkInstaller1(name, url))
-		
-		apkthumb=pyxbmct.Image(ICON)
-		window.placeControl(apkthumb, 31, 30, 45, 19)
-		
-		apklist = pyxbmct.List(buttonFocusTexture=LBUTTON)
-		window.placeControl(apklist, 24, 1, 79, 15)
-		
-		apktextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(apktextbox, 24, 20, 10, 25)
-		
-		desctextboxAPK = pyxbmct.TextBox()
-		window.placeControl(desctextboxAPK, 80, 20, 17, 30)
-		desctextboxAPK.autoScroll(1100, 1100, 1100)
-	
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		
-		apklist.reset()
-		apklist.setVisible(True)
-		apkthumb.setVisible(True)
-		InstallButtonAPK.setVisible(True)
-		apktextbox.setVisible(True)
-		desctextboxAPK.setVisible(True)
-		
-		apkthumb.setImage(ICON)
-		link = net.http_GET(APKFILE).content.replace('\n','').replace('\r','')
-		match = re.compile('name="(.+?)"').findall(link)
-		for name in match:
-			name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
-			apklist.addItem(name)
-		
-		APKButton.controlDown(apklist)
-		
-		apklist.controlRight(InstallButtonAPK)
-		apklist.controlUp(APKButton)
-		
-		InstallButtonAPK.controlLeft(apklist)
-		InstallButtonAPK.controlUp(APKButton)
-	else:
-		no_txt.setVisible(True)
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		wiz.FTGlog('No APK txt')
+		autoadvanced_buttonQ.controlUp(self.ToolsButton)
+		autoadvanced_buttonQ.controlLeft(view_error_button)
+		autoadvanced_buttonQ.controlDown(autoadvanced_button)
+		autoadvanced_buttonQ.controlRight(whitelist_edit_button)
 
-def EmuList():
-	global emulist
-	global emuthumb
-	global desctextboxEMU
-	global emutextbox
-	global InstallButtonEMU
-	global no_txt
+		autoadvanced_button.controlUp(autoadvanced_buttonQ)
+		autoadvanced_button.controlLeft(view_error_button)
+		autoadvanced_button.controlDown(currentsettings_button)
+		autoadvanced_button.controlRight(whitelist_view_button)
 
-	HIDEALL()
-	if not EMUAPKS == 'http://' and not EMUAPKS == '':
-		
-		listbgA.setVisible(True)
-		buildbgA.setVisible(True)
-		
-		InstallButtonEMU = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(InstallButtonEMU,30 , 20, 9, 8)
-		window.connect(InstallButtonEMU, lambda:apkInstaller1(name, url))
-		
-		emulist = pyxbmct.List(buttonFocusTexture=LBUTTON)
-		window.placeControl(emulist, 24, 1, 79, 15)
-		
-		emuthumb=pyxbmct.Image(ICON)
-		window.placeControl(emuthumb, 31, 30, 45, 19)
-		
-		emutextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(emutextbox, 24, 20, 10, 25)
-		
-		desctextboxEMU = pyxbmct.TextBox()
-		window.placeControl(desctextboxEMU, 80, 20, 17, 30)
-		desctextboxEMU.autoScroll(1100, 1100, 1100)
-		
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		
+		currentsettings_button.controlUp(autoadvanced_button)
+		currentsettings_button.controlLeft(full_log_button)
+		currentsettings_button.controlDown(removeadvanced_button)
+		currentsettings_button.controlRight(whitelist_clear_button)
 
-		
-		
-		emulist.setVisible(True)
-		desctextboxEMU.setVisible(True)
-		emutextbox.setVisible(True)
-		InstallButtonEMU.setVisible(True)
-		
-		emulist.reset()
-		emulist.setVisible(True)
-		emuthumb.setVisible(True)
-		link = net.http_GET(EMUAPKS).content.replace('\n','').replace('\r','')
-		match = re.compile('name="(.+?)"').findall(link)
-		for name in match:
-			name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
-			emulist.addItem(name)
-		
-		EmuButton.controlDown(emulist)
-		
-		emulist.controlRight(InstallButtonEMU)
-		emulist.controlUp(EmuButton)
-		
-		InstallButtonEMU.controlLeft(emulist)
-		InstallButtonEMU.controlUp(EmuButton)
-	else:
-		no_txt.setVisible(True)
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		wiz.FTGlog('No EMU txt')
+		removeadvanced_button.controlUp(currentsettings_button)
+		removeadvanced_button.controlLeft(upload_log_button)
+		removeadvanced_button.controlDown(forceupdate_button)
+		removeadvanced_button.controlRight(whitelist_import_button)
 
-def RomList():
-	global romlist 
-	global romthumb
-	global desctextboxROM
-	global romtextbox
-	global InstallButtonROM
-	global no_txt
-	
-	HIDEALL()
-	if not ROMPACK == 'http://' and not ROMPACK == '':
-		
-		listbgA.setVisible(True)
-		buildbgA.setVisible(True)
-		
-		InstallButtonROM = pyxbmct.Button('[COLOR %s][B]Install[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-		window.placeControl(InstallButtonROM,30 , 20, 9, 8)
-		window.connect(InstallButtonROM, lambda:UNZIPROM())
-		
-		romlist = pyxbmct.List(buttonFocusTexture=LBUTTON)
-		window.placeControl(romlist, 24, 1, 79, 15)
-		
-		romthumb=pyxbmct.Image(ICON)
-		window.placeControl(romthumb, 31, 30, 45, 19)
-		
-		romtextbox = pyxbmct.Label('',textColor='0xFFFFFFFF')
-		window.placeControl(romtextbox, 24, 20, 10, 25)
-		
-		
-		desctextboxROM = pyxbmct.TextBox()
-		window.placeControl(desctextboxROM, 80, 20, 17, 30)
-		desctextboxROM.autoScroll(1100, 1100, 1100)
-		
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		
-		romlist.setVisible(True)
-		romthumb.setVisible(True)
-		desctextboxROM.setVisible(True)
-		romtextbox.setVisible(True)
-		InstallButtonROM.setVisible(True)
-		
-		romlist.reset()
-		romlist.setVisible(True)
+		whitelist_edit_button.controlUp(self.ToolsButton)
+		whitelist_edit_button.controlLeft(autoadvanced_buttonQ)
+		whitelist_edit_button.controlDown(whitelist_view_button)
 
-		link = net.http_GET(ROMPACK).content.replace('\n','').replace('\r','')
-		match = re.compile('name="(.+?)"').findall(link)
-		for name in match:
-			name = '[COLOR %s]' % LIST_TEXT +name+'[/COLOR]'
-			romlist.addItem(name)
-		
-		ROMButton.controlDown(romlist)
-		
-		romlist.controlRight(InstallButtonROM)
-		romlist.controlUp(ROMButton)
-		
-		InstallButtonROM.controlLeft(romlist)
-		InstallButtonROM.controlUp(ROMButton)
-	else:
-		no_txt.setVisible(True)
-		AddonButton.setVisible(True)
-		APKButton.setVisible(True)
-		ROMButton.setVisible(True)
-		EmuButton.setVisible(True)
-		wiz.FTGlog('No ROM txt')
+		whitelist_view_button.controlUp(whitelist_edit_button)
+		whitelist_view_button.controlLeft(autoadvanced_button)
+		whitelist_view_button.controlDown(whitelist_clear_button)
 
-def Un_Hide_Net():
-	mac,inter_ip,ip,city,state,country,isp = wiz.net_info()
-	MAC.setLabel('[COLOR %s]Mac:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, mac))
-	INTER_IP.setLabel('[COLOR %s]Internal IP: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,inter_ip))
-	IP.setLabel('[COLOR %s]External IP:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,ip))
-	CITY.setLabel('[COLOR %s]City:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,city))
-	STATE.setLabel('[COLOR %s]State:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,state))
-	COUNTRY.setLabel('[COLOR %s]Country:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,country))
-	ISP.setLabel('[COLOR %s]ISP:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,isp))
+		whitelist_clear_button.controlUp(whitelist_view_button)
+		whitelist_clear_button.controlLeft(currentsettings_button)
+		whitelist_clear_button.controlDown(whitelist_import_button)
 
-def Maint():
-	HIDEALL()
-	global total_clean_button
-	global total_cache_button
-	global total_packages_button
-	global total_thumbnails_button
-	global TC
-	global DC
-	global DPK
-	global DTH
-	global TPK
-	global TTH
-	global speedtest_button
-	global sysinfo_title
-	global version1
-	global store
-	global rom_used
-	global rom_free
-	global rom_total
-	global mem
-	global ram_used
-	global ram_free
-	global ram_total
-	global kodi
-	global total
-	global video
-	global program
-	global music
-	global picture
-	global repos
-	global skins
-	global scripts
-	
-	sysinfobg.setVisible(True)
-	maintbg.setVisible(True)
-	speedthumb.setVisible(True)
-	netinfobg.setVisible(True)
-	
-	sizepack   = wiz.getSize(PACKAGES)
-	totalpack   = wiz.getTotal(PACKAGES)
-	sizethumb  = wiz.getSize(THUMBS)
-	totalthumb   = wiz.getTotal(THUMBS)
-	sizecache  = wiz.getCacheSize()
-	totalsize  = sizepack+sizethumb+sizecache
-	picture, music, video, programs, repos, scripts, skins, codename, version, name,storage_free ,storage_used, storage_total, ram_free, ram_used, ram_total = wiz.SYSINFO()
-	
-	##sysinfo
-	
-	sysinfo_title =  pyxbmct.Label('[COLOR %s][B]SYSTEM INFO[/B][/COLOR]' % DES_T_COLOR)
-	window.placeControl(sysinfo_title, 12, 31, 10, 15)
-	version1 =  pyxbmct.Label('[COLOR %s]Version:[/COLOR] [COLOR %s]%s[/COLOR] - [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, codename, DESCOLOR, version))
-	window.placeControl(version1, 18, 37, 10, 15)
-	store = pyxbmct.Label('[B][COLOR %s]Storage[/COLOR][/B]'% DESCOLOR)
-	window.placeControl(store, 23, 39, 10, 10)
-	rom_used=pyxbmct.Label('[COLOR %s]Used:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_free))
-	window.placeControl(rom_used, 28, 39, 10, 10)
-	rom_free=pyxbmct.Label('[COLOR %s]Free:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_used))
-	window.placeControl(rom_free, 32, 39, 10, 10)
-	rom_total=pyxbmct.Label('[COLOR %s]Total:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, storage_total))
-	window.placeControl(rom_total, 37, 39, 10, 10)
-	mem = pyxbmct.Label('[B][COLOR %s]Memory[/COLOR][/B]' % DESCOLOR)
-	window.placeControl(mem, 43, 39, 10, 10)
-	### Hello, how are you
-	ram_used=pyxbmct.Label('[COLOR %s]Used:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_used))
-	window.placeControl(ram_used, 48, 39, 10, 10)
-	ram_free=pyxbmct.Label('[COLOR %s]Free:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_free))
-	window.placeControl(ram_free, 53, 39, 10, 10)
-	ram_total=pyxbmct.Label('[COLOR %s]Total:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, ram_total))
-	window.placeControl(ram_total, 58, 39, 10, 10)
-	
-	##addon info
-	
-	kodi = pyxbmct.Label('[COLOR %s]Name:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, name))
-	window.placeControl(kodi, 17, 22, 10, 15)
-	totalcount = len(picture) + len(music) + len(video) + len(programs) + len(scripts) + len(skins) + len(repos) 
-	total = pyxbmct.Label('[COLOR %s]Addons Total: [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, totalcount))
-	window.placeControl(total, 22, 22, 10, 10)
-	video=pyxbmct.Label('[COLOR %s]Video Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(video))))
-	window.placeControl(video, 27, 22, 10, 10)
-	program=pyxbmct.Label('[COLOR %s]Program Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(programs))))
-	window.placeControl(program, 33, 22, 10, 10)
-	music=pyxbmct.Label('[COLOR %s]Music Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(music))))
-	window.placeControl(music, 37, 22, 10, 10)
-	picture=pyxbmct.Label('[COLOR %s]Picture Addons:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(picture))))
-	window.placeControl(picture, 42, 22, 10, 10)
-	repos=pyxbmct.Label('[COLOR %s]Repositories:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(repos))))
-	window.placeControl(repos, 47, 22, 10, 10)
-	skins=pyxbmct.Label('[COLOR %s]Skins: [/COLOR][COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(skins))))
-	window.placeControl(skins, 52, 22, 10, 10)
-	scripts=pyxbmct.Label('[COLOR %s]Scripts/Modules:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR, str(len(scripts))))
-	window.placeControl(scripts, 57, 22, 10, 10)
-	
-	global MAC
-	global INTER_IP
-	global IP
-	global CITY
-	global STATE
-	global COUNTRY
-	global ISP
-	global netinfo_title
-	global un_hide_net
-	global settings_button1
-	global trigger_title
-	
-	
-	###NET INFO
-	
-	netinfo_title =  pyxbmct.Label('[COLOR %s][B]NETWORK INFO[/B][/COLOR]'% DES_T_COLOR)
-	window.placeControl(netinfo_title, 12, 7, 10, 20)
-	MAC = pyxbmct.Label('[COLOR %s]Mac:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(MAC, 18 , 1 ,  10, 18)
-	INTER_IP = pyxbmct.Label('[COLOR %s]Internal IP: [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(INTER_IP, 23 , 1 ,  10, 18)
-	IP = pyxbmct.Label('[COLOR %s]External IP:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(IP, 28 , 1 ,  10, 18)
-	CITY = pyxbmct.Label('[COLOR %s]City:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(CITY, 33 , 1 ,  10, 18)
-	STATE = pyxbmct.Label('[COLOR %s]State:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(STATE, 38 , 1 ,  10, 18)
-	COUNTRY = pyxbmct.Label('[COLOR %s]Country:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(COUNTRY, 43 , 1 ,  10, 18)
-	ISP = pyxbmct.Label('[COLOR %s]ISP:[/COLOR] [COLOR %s]Hidden[/COLOR]' % (DES_T_COLOR, DESCOLOR))
-	window.placeControl(ISP, 48 , 1 ,  10, 18)
-	
-	#maint lables#
-	TC = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(totalsize)))
-	window.placeControl(TC, 80 , 21 ,  10, 9)
-	DC = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizecache)))
-	window.placeControl(DC, 96 , 21 ,  10, 9)
-	DPK = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizepack)))
-	window.placeControl(DPK, 96 , 31 ,  10, 9)
-	TPK = pyxbmct.Label('[COLOR %s]Files:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,totalpack))
-	window.placeControl(TPK, 101 , 31 ,  10, 9)
-	DTH = pyxbmct.Label('[COLOR %s]Size:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,wiz.convertSize(sizethumb)))
-	window.placeControl(DTH, 96 , 41 ,  10, 9)
-	TTH = pyxbmct.Label('[COLOR %s]Files:[/COLOR] [COLOR %s]%s[/COLOR]' % (DES_T_COLOR, DESCOLOR,totalthumb))
-	window.placeControl(TTH, 101 , 41 ,  10, 9)
-	
-	#buttons#
-	total_clean_button = pyxbmct.Button('[COLOR %s]Total Clean Up[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(total_clean_button, 72 , 21 ,  9, 8)
-	window.connect(total_clean_button,lambda: totalClean())
-	### I'm good, u?
-	total_cache_button = pyxbmct.Button('[COLOR %s]Delete Cache[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(total_cache_button, 87 , 21 ,  9, 9)
-	window.connect(total_cache_button,lambda: clearCache())
-	
-	total_packages_button = pyxbmct.Button('[COLOR %s]Delete Packages[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(total_packages_button, 87 , 31 ,  9, 9)
-	window.connect(total_packages_button,lambda: clearPackages())
-	
-	total_thumbnails_button = pyxbmct.Button('[COLOR %s]Delete Thumbnails[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(total_thumbnails_button, 87 , 41 ,  9, 9)
-	window.connect(total_thumbnails_button, lambda: clearThumb(type=None))
-	
-	speedtest_button = pyxbmct.Button('[COLOR %s]Speed Test[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(speedtest_button, 58 , 1 ,  9, 8)
-	window.connect(speedtest_button, lambda: runspeedtest())
-	
-	un_hide_net = pyxbmct.Button('[COLOR %s]Show Net Info[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(un_hide_net, 58, 10, 9, 8)
-	window.connect(un_hide_net, lambda: Un_Hide_Net())
-	
-	trigger_title =  pyxbmct.Label('[COLOR %s]Change pop-up trigger.[/COLOR]'% DES_T_COLOR)
-	window.placeControl(trigger_title, 72 , 30 , 1, 11)
-	
-	settings_button1 = pyxbmct.Button('[COLOR %s]Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(settings_button1, 72 , 41 ,  9, 8)
-	window.connect(settings_button1, lambda: wiz.openS('Maintenance'))
+		whitelist_import_button.controlUp(whitelist_clear_button)
+		whitelist_import_button.controlLeft(removeadvanced_button)
+		whitelist_import_button.controlDown(whitelist_export_button)
 
+		whitelist_export_button.controlUp(whitelist_import_button)
+		whitelist_export_button.controlLeft(removeadvanced_button)
+		whitelist_export_button.controlDown(removeaddondata_u_button)
 
-	#HIDEALL()
-	splash.setVisible(False)
-	total_clean_button.setVisible(True)
-	total_cache_button.setVisible(True)
-	total_packages_button.setVisible(True)
-	total_thumbnails_button.setVisible(True)
-	TC.setVisible(True)
-	DC.setVisible(True)
-	DPK.setVisible(True)
-	DTH.setVisible(True)
-	TPK.setVisible(True)
-	TTH.setVisible(True)
-	
-	speedtest_button.setVisible(True)
-	
-	sysinfo_title.setVisible(True)
-	version1.setVisible(True)
-	store.setVisible(True)
-	rom_used.setVisible(True)
-	rom_free.setVisible(True)
-	rom_total.setVisible(True)
-	mem.setVisible(True)
-	ram_used.setVisible(True)
-	ram_free.setVisible(True)
-	ram_total.setVisible(True)
-	kodi.setVisible(True)
-	total.setVisible(True)
-	video.setVisible(True)
-	program.setVisible(True)
-	music.setVisible(True)
-	picture.setVisible(True)
-	repos.setVisible(True)
-	skins.setVisible(True)
-	scripts.setVisible(True)
-	
-	netinfo_title.setVisible(True)
-	MAC.setVisible(True)
-	un_hide_net.setVisible(True)
-	INTER_IP.setVisible(True)
-	IP.setVisible(True)
-	ISP.setVisible(True)
-	CITY.setVisible(True)
-	STATE.setVisible(True)
-	COUNTRY.setVisible(True)
-	settings_button1.setVisible(True)
-	trigger_title.setVisible(True)
-	
-	MaintButton.controlDown(speedtest_button)
-	
-	speedtest_button.controlUp(MaintButton)
-	speedtest_button.controlDown(total_clean_button)
-	speedtest_button.controlRight(un_hide_net)
-	
-	un_hide_net.controlUp(MaintButton)
-	un_hide_net.controlDown(total_clean_button)
-	un_hide_net.controlRight(total_clean_button)
-	un_hide_net.controlLeft(speedtest_button)
-	
-	total_clean_button.controlUp(MaintButton)
-	total_clean_button.controlDown(total_cache_button)
-	total_clean_button.controlRight(settings_button1)
-	total_clean_button.controlLeft(un_hide_net)
-	
-	total_cache_button.controlUp(total_clean_button)
-	total_cache_button.controlRight(total_packages_button)
-	total_cache_button.controlLeft(un_hide_net)
-	
-	total_packages_button.controlUp(settings_button1)
-	total_packages_button.controlRight(total_thumbnails_button)
-	total_packages_button.controlLeft(total_cache_button)
-	
-	total_thumbnails_button.controlUp(settings_button1)
-	total_thumbnails_button.controlLeft(total_packages_button)
-	
-	settings_button1.controlUp(MaintButton)
-	settings_button1.controlDown(total_thumbnails_button)
-	settings_button1.controlLeft(total_clean_button)
+		checksources_button.controlUp(upload_log_button)
+		checksources_button.controlDown(checkrepos_button)
+		checksources_button.controlRight(forceupdate_button)
 
-def BackRes():
-	HIDEALL()
-	global favs
-	global backuploc
-	global Backup
-	global backup_build_button
-	global backup_gui_button
-	global backup_addondata_button
-	global restore_build_button
-	global restore_gui_button
-	global restore_addondata_button
-	global clear_backup_button
-	global savefav_button
-	global restorefav_button
-	global clearfav_button
-	global backupaddonpack_button
-	global restore_title
-	global delete_title
-	global set_title
-	global settings_button
-	
-	bakresbg.setVisible(True)
-	
-	last = str(FAVSsave) if not FAVSsave == '' else 'Favourites hasnt been saved yet.'
-	#loc info#
-	
-	favs = pyxbmct.Label('[B][COLOR %s]Last Save:[/COLOR] [COLOR %s]%s[/COLOR][/B]' % (DES_T_COLOR, DESCOLOR,str(last)))
-	window.placeControl(favs, 14, 3, 10, 30)
-	
-	backuploc = pyxbmct.Label('[B][COLOR %s]Back-Up Location: [COLOR %s]%s[/COLOR][/B]' % (DES_T_COLOR, DESCOLOR,MYBUILDS))
-	window.placeControl(backuploc, 22, 3, 10, 30)
-	
-	#backup#
-	Backup = pyxbmct.Label('[B][COLOR %s]Backup Tools:[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(Backup, 32, 3, 10, 10)
-	
-	backup_build_button = pyxbmct.Button('[COLOR %s] Build[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(backup_build_button, 42, 3, 10, 10)
-	window.connect(backup_build_button,lambda: wiz.backUpOptions('build'))
-	
-	backup_gui_button = pyxbmct.Button('[COLOR %s] GUI[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(backup_gui_button, 52, 3, 10, 10)
-	window.connect(backup_gui_button,lambda: wiz.backUpOptions('guifix'))
-	
-	backupaddonpack_button = pyxbmct.Button('[COLOR %s] Addon Pack[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(backupaddonpack_button, 62, 3, 10, 10)
-	window.connect(backupaddonpack_button,lambda: wiz.backUpOptions('addon pack'))
-	# I'm ok, thanks for asking
-	backup_addondata_button = pyxbmct.Button('[COLOR %s] Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(backup_addondata_button, 72, 3, 10, 10)
-	window.connect(backup_addondata_button,lambda: wiz.backUpOptions('addondata'))
-	
-	savefav_button = pyxbmct.Button('[COLOR %s] Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(savefav_button, 82, 3, 10, 10)
-	window.connect(savefav_button,lambda: wiz.BACKUPFAV())
-	
-	#restore#
-	restore_title = pyxbmct.Label('[B][COLOR %s]Restore Tools:[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(restore_title, 32, 20, 10, 10)
-	
-	restore_build_button = pyxbmct.Button('[COLOR %s]Build/Pack[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(restore_build_button, 42, 20, 10, 10)
-	window.connect(restore_build_button,lambda: restoreit('build'))
-	
-	restore_gui_button = pyxbmct.Button('[COLOR %s]GUI[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(restore_gui_button, 52, 20, 10, 10)
-	window.connect(restore_gui_button,lambda: restoreit('gui'))
-	### Nope not here
-	restore_addondata_button = pyxbmct.Button('[COLOR %s]Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(restore_addondata_button, 62, 20, 10, 10)
-	window.connect(restore_addondata_button,lambda: restoreit('addondata'))
-	
-	restorefav_button = pyxbmct.Button('[COLOR %s]Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(restorefav_button, 72, 20, 10, 10)
-	window.connect(restorefav_button,lambda: wiz.RESTOREFAV())
-	
-	#clear backups#
-	delete_title = pyxbmct.Label('[B][COLOR red]Delete Tools:[/COLOR][/B]')
-	window.placeControl(delete_title, 54, 37, 10, 10)
-	
-	clearfav_button = pyxbmct.Button('[COLOR %s]Clear Favourites[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(clearfav_button, 64, 37, 10, 10)
-	window.connect(clearfav_button,lambda: wiz.DELFAV())
-	
-	clear_backup_button = pyxbmct.Button('[COLOR %s]Clear Back-ups[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(clear_backup_button, 74, 37, 10, 10)
-	window.connect(clear_backup_button,lambda: wiz.cleanupBackup())
-	
-	#settings
-	set_title = pyxbmct.Label('[B][COLOR %s]Settings:[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(set_title, 32, 37, 10, 10)
-	
-	settings_button = pyxbmct.Button('[COLOR %s]Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(settings_button, 42, 37, 10, 10)
-	window.connect(settings_button, lambda: wiz.openS('Maintenance'))
-	
-	
-	favs.setVisible(True)
-	backuploc.setVisible(True)
-	Backup.setVisible(True)
-	backup_build_button.setVisible(True)
-	backup_gui_button.setVisible(True)
-	backup_addondata_button.setVisible(True)
-	restore_build_button.setVisible(True)
-	restore_gui_button.setVisible(True)
-	restore_addondata_button.setVisible(True)
-	clear_backup_button.setVisible(True)
-	savefav_button.setVisible(True)
-	restorefav_button.setVisible(True)
-	clearfav_button.setVisible(True)
-	backupaddonpack_button.setVisible(True)
-	restore_title.setVisible(True)
-	delete_title.setVisible(True)
-	set_title.setVisible(True)
-	settings_button.setVisible(True)
-	
-	BackResButton.controlDown(backup_build_button)
+		checkrepos_button.controlUp(checksources_button)
+		checkrepos_button.controlRight(fixaddonupdate_button)
 
-	backup_build_button.controlUp(BackResButton)
-	backup_build_button.controlDown(backup_gui_button)
-	backup_build_button.controlRight(restore_build_button)
+		forceupdate_button.controlUp(removeadvanced_button)
+		forceupdate_button.controlLeft(checksources_button)
+		forceupdate_button.controlDown(fixaddonupdate_button)
+		forceupdate_button.controlRight(removeaddons_button)
 
-	backup_gui_button.controlUp(backup_build_button)
-	backup_gui_button.controlDown(backupaddonpack_button)
-	backup_gui_button.controlRight(restore_gui_button)
-	
-	backupaddonpack_button.controlUp(backup_gui_button)
-	backupaddonpack_button.controlDown(backup_addondata_button)
-	backupaddonpack_button.controlRight(restore_addondata_button)
-	
-	backup_addondata_button.controlUp(backupaddonpack_button)
-	backup_addondata_button.controlDown(savefav_button)
-	backup_addondata_button.controlRight(restorefav_button)
-	
-	savefav_button.controlUp(backup_addondata_button)
-	savefav_button.controlRight(restorefav_button)
+		fixaddonupdate_button.controlUp(forceupdate_button)
+		fixaddonupdate_button.controlLeft(checkrepos_button)
+		fixaddonupdate_button.controlRight(removeaddondata_all_button)
 
-	restore_build_button.controlUp(BackResButton)
-	restore_build_button.controlDown(restore_gui_button)
-	restore_build_button.controlRight(settings_button)
-	restore_build_button.controlLeft(backup_build_button)
+		removeaddons_button.controlUp(removeadvanced_button)
+		removeaddons_button.controlLeft(forceupdate_button)
+		removeaddons_button.controlDown(removeaddondata_all_button)
+		removeaddons_button.controlRight(removeaddondata_u_button)
 
-	restore_gui_button.controlUp(restore_build_button)
-	restore_gui_button.controlDown(restore_addondata_button)
-	restore_gui_button.controlRight(settings_button)
-	restore_gui_button.controlLeft(backup_gui_button)
+		removeaddondata_all_button.controlUp(removeaddons_button)
+		removeaddondata_all_button.controlLeft(fixaddonupdate_button)
+		removeaddondata_all_button.controlRight(removeaddondata_e_button)
 
-	restore_addondata_button.controlUp(restore_gui_button)
-	restore_addondata_button.controlDown(restorefav_button)
-	restore_addondata_button.controlRight(clearfav_button)
-	restore_addondata_button.controlLeft(backupaddonpack_button)
+		removeaddondata_u_button.controlUp(whitelist_export_button)
+		removeaddondata_u_button.controlLeft(removeaddons_button)
+		removeaddondata_u_button.controlDown(removeaddondata_e_button)
 
-	restorefav_button.controlUp(restore_addondata_button)
-	restorefav_button.controlRight(clear_backup_button)
-	restorefav_button.controlLeft(backup_addondata_button)
+		removeaddondata_e_button.controlUp(removeaddondata_u_button)
+		removeaddondata_e_button.controlLeft(removeaddondata_all_button)
 
-	settings_button.controlUp(BackResButton)
-	settings_button.controlDown(clearfav_button)
-	settings_button.controlLeft(restore_build_button)
+	def Installables(self):
 
-	clearfav_button.controlUp(settings_button)
-	clearfav_button.controlDown(clear_backup_button)
-	clearfav_button.controlLeft(restore_addondata_button)
+		global AddonButton
+		global APKButton
+		global ROMButton
+		global EmuButton
 
-	clear_backup_button.controlUp(clearfav_button)
-	clear_backup_button.controlLeft(restorefav_button)
+		self.HIDEALL()
 
-def Tools():
-	HIDEALL()
-	
-	global view_error_button
-	global full_log_button
-	global upload_log_button
-	global Log_title
-	global Log_errors
-	
-	toolsbg.setVisible(True)
-	
-	Log_title = pyxbmct.Label('[B][COLOR %s]Logging Tools[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(Log_title, 15, 4, 10, 10)
-	
-	Log_errors = pyxbmct.Label('[COLOR %s][B]Errors in Log:[/B][/COLOR] %s' % (OTHER_BUTTONS_TEXT, log_tools()))
-	window.placeControl(Log_errors, 22, 4, 10, 15)
-	## uhhh not here
-	view_error_button = pyxbmct.Button('[COLOR %s]View Errors[/COLOR]'% OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(view_error_button, 31, 4, 9, 9)
-	window.connect(view_error_button, lambda: errorChecking(log=None, count=None, last=None))
-	
-	full_log_button = pyxbmct.Button('[COLOR %s]View Full Log[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(full_log_button, 40, 4, 9, 9)
-	window.connect(full_log_button,lambda :LogViewer())
-	
-	upload_log_button = pyxbmct.Button('[COLOR %s]Upload Full Log[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(upload_log_button, 49, 4, 9, 9)
-	window.connect(upload_log_button,lambda :uploadLog.Main())
-	
-	#Addon#
-	
-	global removeaddons_button
-	global removeaddondata_u_button
-	global removeaddondata_e_button
-	global checksources_button
-	global checkrepos_button
-	global forceupdate_button
-	global fixaddonupdate_button
-	global removeaddondata_all_button
-	global scan
-	global fix
-	global delet
-	global delet1
-	global Addon
-	
-	Addon = pyxbmct.Label('[B][COLOR %s]Addon Tools[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(Addon, 69, 21, 9, 9)
-	#buttons#
-	scan = pyxbmct.Label('[B][COLOR %s]Scan For:[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(scan, 75, 4, 9, 10)
-	
-	checksources_button = pyxbmct.Button('[COLOR %s]Broken Sources[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(checksources_button, 82, 3, 9, 10)
-	window.connect(checksources_button,lambda: wiz.checkSources())
-	
-	checkrepos_button = pyxbmct.Button('[COLOR %s]Broken Repositories[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(checkrepos_button, 92, 3, 9, 10)
-	window.connect(checkrepos_button,lambda: wiz.checkRepos())
-	
-	fix = pyxbmct.Label('[B][COLOR %s]Force / Fix:[/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(fix, 75, 16, 9, 10)
-	
-	forceupdate_button = pyxbmct.Button('[COLOR %s]Update Addons[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(forceupdate_button, 82, 15, 9, 9)
-	window.connect(forceupdate_button,lambda: wiz.forceUpdate())
-	
-	fixaddonupdate_button = pyxbmct.Button('[COLOR %s]Addons Not Updating[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(fixaddonupdate_button, 92, 15, 9, 9)
-	window.connect(fixaddonupdate_button,lambda: fixaddonupdate)
-	### I see you looking
-	delet = pyxbmct.Label('[B][COLOR %s]Delete: [/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(delet, 75, 28, 9, 10)
-	
-	removeaddons_button = pyxbmct.Button('[COLOR %s]Delete Selected Addons[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(removeaddons_button, 82, 26, 9, 9)
-	window.connect(removeaddons_button,lambda: removeAddonMenu)
-	
-	removeaddondata_all_button = pyxbmct.Button('[COLOR %s]All Addon Data[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(removeaddondata_all_button, 92, 26, 9, 9)
-	window.connect(removeaddondata_all_button,lambda: removeAddonData('all'))
-	
-	delet1 = pyxbmct.Label('[B][COLOR %s]Delete: [/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(delet1, 75, 39, 9, 10)
-	
-	removeaddondata_u_button = pyxbmct.Button('[COLOR %s]Uninstalled Folders[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(removeaddondata_u_button, 82, 37, 9, 9)
-	window.connect(removeaddondata_u_button,lambda: removeAddonData('uninstalled'))
-	
-	removeaddondata_e_button = pyxbmct.Button('[COLOR %s]Empty Folders[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(removeaddondata_e_button, 92, 37, 9, 9)
-	window.connect(removeaddondata_e_button,lambda: removeAddonData('empty'))
-	
-	####White List###
-	global WhiteList
-	global whitelist_edit_button
-	global whitelist_view_button
-	global whitelist_clear_button
-	global whitelist_import_button
-	global whitelist_export_button
-	
-	
-	WhiteList = pyxbmct.Label('[B][COLOR %s]White List Tools: [/COLOR][/B]' % DES_T_COLOR)
-	window.placeControl(WhiteList, 15, 36, 9, 9)
-	
-	whitelist_edit_button = pyxbmct.Button('[COLOR %s]WhiteList: Edit[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(whitelist_edit_button, 22, 36, 9, 9)
-	window.connect(whitelist_edit_button,lambda: wiz.whiteList('edit'))
-	
-	whitelist_view_button = pyxbmct.Button('[COLOR %s]WhiteList: View[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(whitelist_view_button, 31, 36, 9, 9)
-	window.connect(whitelist_view_button,lambda: wiz.whiteList('view'))
-	
-	whitelist_clear_button = pyxbmct.Button('[COLOR %s]WhiteList: Clear[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(whitelist_clear_button, 40, 36, 9, 9)
-	window.connect(whitelist_clear_button,lambda: wiz.whiteList('clear'))
-	### It's not here
-	whitelist_import_button = pyxbmct.Button('[COLOR %s]WhiteList: Import[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(whitelist_import_button, 49, 36, 9, 9)
-	window.connect(whitelist_import_button,lambda: wiz.whiteList('Import'))
-	
-	whitelist_export_button = pyxbmct.Button('[COLOR %s]WhiteList: Export[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(whitelist_export_button, 58, 36, 9, 9)
-	window.connect(whitelist_export_button,lambda: wiz.whiteList('export'))
-	
-	########  Advanced ########
-	global Advan
-	global autoadvanced_buttonQ
-	global autoadvanced_button
-	global currentsettings_button
-	global removeadvanced_button
-	
-	Advan = pyxbmct.Label('[B][COLOR %s]Advanced Settings Tools[/COLOR][/B]'% DES_T_COLOR)
-	window.placeControl(Advan, 15, 20, 9, 13)
-	#buttons#
-	autoadvanced_buttonQ = pyxbmct.Button('[COLOR %s]Quick Config[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(autoadvanced_buttonQ, 22, 21, 9, 9)
-	window.connect(autoadvanced_buttonQ,lambda: notify.autoConfig2())
-	
-	autoadvanced_button = pyxbmct.Button('[COLOR %s]Full Config[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(autoadvanced_button, 31, 21, 9, 9)
-	window.connect(autoadvanced_button,lambda: notify.autoConfig())
-	##Wait it's here!!
-	currentsettings_button = pyxbmct.Button('[COLOR %s]Current Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(currentsettings_button, 40, 21, 9, 9)
-	window.connect(currentsettings_button,lambda: viewAdvanced())
-	
-	removeadvanced_button = pyxbmct.Button('[COLOR %s]Delete Settings[/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-	window.placeControl(removeadvanced_button, 49, 21, 9, 9)
-	window.connect(removeadvanced_button,lambda: removeAdvanced())
+		self.listbgA.setVisible(True)
+		self.buildbgA.setVisible(True)
 
+		AddonButton = pyxbmct.Button('[COLOR %s][B]Addons[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(AddonButton,12 , 9,  7, 8)
+		self.connect(AddonButton, lambda: self.AddonList())
 	
+		APKButton = pyxbmct.Button('[COLOR %s][B]APKs[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(APKButton,12 , 17 ,  7, 8)
+		self.connect(APKButton, lambda: self.APKList())
 	
-	view_error_button.setVisible(True)
-	full_log_button.setVisible(True)
-	upload_log_button.setVisible(True)
+		ROMButton = pyxbmct.Button('[COLOR %s][B]Retro Roms[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(ROMButton,12 , 25 ,  7, 8)
+		self.connect(ROMButton, lambda: self.RomList())
 	
-	removeaddons_button.setVisible(True)
-	removeaddondata_all_button.setVisible(True)
-	removeaddondata_u_button.setVisible(True)
-	removeaddondata_e_button.setVisible(True)
+		EmuButton = pyxbmct.Button('[COLOR %s][B]Emulators[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
+		self.placeControl(EmuButton,12 , 33 ,  7, 8)
+		self.connect(EmuButton, lambda: self.EmuList())
 	
-	checksources_button.setVisible(True)
-	checkrepos_button.setVisible(True)
-	forceupdate_button.setVisible(True)
-	fixaddonupdate_button.setVisible(True)
+		self.InstallablesButton.controlDown(AddonButton)
+		AddonButton.controlUp(self.InstallablesButton)
+		APKButton.controlUp(self.InstallablesButton)
+		ROMButton.controlUp(self.InstallablesButton)
+		EmuButton.controlUp(self.InstallablesButton)
 	
-	Log_title.setVisible(True)
-	Log_errors.setVisible(True)
+		AddonButton.controlRight(APKButton)
+		AddonButton.controlLeft(EmuButton)
 	
+		APKButton.controlRight(ROMButton)
+		APKButton.controlLeft(AddonButton)
 	
-	Addon.setVisible(True)
-	scan.setVisible(True)
-	fix.setVisible(True)
-	delet.setVisible(True)
-	delet1.setVisible(True)
-	WhiteList.setVisible(True)
+		ROMButton.controlRight(EmuButton)
+		ROMButton.controlLeft(APKButton)
 	
-	whitelist_edit_button.setVisible(True)
-	whitelist_view_button.setVisible(True)
-	whitelist_clear_button.setVisible(True)
-	whitelist_import_button.setVisible(True)
-	whitelist_export_button.setVisible(True)
-	
-	Advan.setVisible(True)
-	autoadvanced_buttonQ.setVisible(True)
-	autoadvanced_button.setVisible(True)
-	currentsettings_button.setVisible(True)
-	removeadvanced_button.setVisible(True)
-	
-	ToolsButton.controlDown(view_error_button)
-	
-	view_error_button.controlUp(ToolsButton)
-	view_error_button.controlDown(full_log_button)
-	view_error_button.controlRight(autoadvanced_button)
-
-	full_log_button.controlUp(view_error_button)
-	full_log_button.controlDown(upload_log_button)
-	full_log_button.controlRight(currentsettings_button)
-
-	upload_log_button.controlUp(full_log_button)
-	upload_log_button.controlDown(checksources_button)
-	upload_log_button.controlRight(removeadvanced_button)
-
-	autoadvanced_buttonQ.controlUp(ToolsButton)
-	autoadvanced_buttonQ.controlLeft(view_error_button)
-	autoadvanced_buttonQ.controlDown(autoadvanced_button)
-	autoadvanced_buttonQ.controlRight(whitelist_edit_button)
-
-	autoadvanced_button.controlUp(autoadvanced_buttonQ)
-	autoadvanced_button.controlLeft(view_error_button)
-	autoadvanced_button.controlDown(currentsettings_button)
-	autoadvanced_button.controlRight(whitelist_view_button)
-
-	currentsettings_button.controlUp(autoadvanced_button)
-	currentsettings_button.controlLeft(full_log_button)
-	currentsettings_button.controlDown(removeadvanced_button)
-	currentsettings_button.controlRight(whitelist_clear_button)
-
-	removeadvanced_button.controlUp(currentsettings_button)
-	removeadvanced_button.controlLeft(upload_log_button)
-	removeadvanced_button.controlDown(forceupdate_button)
-	removeadvanced_button.controlRight(whitelist_import_button)
-
-	whitelist_edit_button.controlUp(ToolsButton)
-	whitelist_edit_button.controlLeft(autoadvanced_buttonQ)
-	whitelist_edit_button.controlDown(whitelist_view_button)
-
-	whitelist_view_button.controlUp(whitelist_edit_button)
-	whitelist_view_button.controlLeft(autoadvanced_button)
-	whitelist_view_button.controlDown(whitelist_clear_button)
-
-	whitelist_clear_button.controlUp(whitelist_view_button)
-	whitelist_clear_button.controlLeft(currentsettings_button)
-	whitelist_clear_button.controlDown(whitelist_import_button)
-
-	whitelist_import_button.controlUp(whitelist_clear_button)
-	whitelist_import_button.controlLeft(removeadvanced_button)
-	whitelist_import_button.controlDown(whitelist_export_button)
-
-	whitelist_export_button.controlUp(whitelist_import_button)
-	whitelist_export_button.controlLeft(removeadvanced_button)
-	whitelist_export_button.controlDown(removeaddondata_u_button)
-
-	checksources_button.controlUp(upload_log_button)
-	checksources_button.controlDown(checkrepos_button)
-	checksources_button.controlRight(forceupdate_button)
-
-	checkrepos_button.controlUp(checksources_button)
-	checkrepos_button.controlRight(fixaddonupdate_button)
-
-	forceupdate_button.controlUp(removeadvanced_button)
-	forceupdate_button.controlLeft(checksources_button)
-	forceupdate_button.controlDown(fixaddonupdate_button)
-	forceupdate_button.controlRight(removeaddons_button)
-
-	fixaddonupdate_button.controlUp(forceupdate_button)
-	fixaddonupdate_button.controlLeft(checkrepos_button)
-	fixaddonupdate_button.controlRight(removeaddondata_all_button)
-
-	removeaddons_button.controlUp(removeadvanced_button)
-	removeaddons_button.controlLeft(forceupdate_button)
-	removeaddons_button.controlDown(removeaddondata_all_button)
-	removeaddons_button.controlRight(removeaddondata_u_button)
-
-	removeaddondata_all_button.controlUp(removeaddons_button)
-	removeaddondata_all_button.controlLeft(fixaddonupdate_button)
-	removeaddondata_all_button.controlRight(removeaddondata_e_button)
-
-	removeaddondata_u_button.controlUp(whitelist_export_button)
-	removeaddondata_u_button.controlLeft(removeaddons_button)
-	removeaddondata_u_button.controlDown(removeaddondata_e_button)
-
-	removeaddondata_e_button.controlUp(removeaddondata_u_button)
-	removeaddondata_e_button.controlLeft(removeaddondata_all_button)
-
-def Installables():
-
-	global AddonButton
-	global APKButton
-	global ROMButton
-	global EmuButton
-
-	HIDEALL()
-
-	listbgA.setVisible(True)
-	buildbgA.setVisible(True)
-
-	AddonButton = pyxbmct.Button('[COLOR %s][B]Wizards[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
-	window.placeControl(AddonButton,12 , 9,  7, 8)
-	window.connect(AddonButton, lambda: AddonList())
-	
-	APKButton = pyxbmct.Button('[COLOR %s][B]APKs[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
-	window.placeControl(APKButton,12 , 17 ,  7, 8)
-	window.connect(APKButton, lambda: APKList())
-	
-	ROMButton = pyxbmct.Button('[COLOR %s][B]- - - -[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
-	window.placeControl(ROMButton,12 , 25 ,  7, 8)
-	window.connect(ROMButton, lambda: RomList())
-	
-	EmuButton = pyxbmct.Button('[COLOR %s][B]- - - -[/B][/COLOR]' % OTHER_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
-	window.placeControl(EmuButton,12 , 33 ,  7, 8)
-	window.connect(EmuButton, lambda: EmuList())
-	
-	InstallablesButton.controlDown(AddonButton)
-	AddonButton.controlUp(InstallablesButton)
-	APKButton.controlUp(InstallablesButton)
-	ROMButton.controlUp(InstallablesButton)
-	EmuButton.controlUp(InstallablesButton)
-	
-	AddonButton.controlRight(APKButton)
-	AddonButton.controlLeft(EmuButton)
-	
-	APKButton.controlRight(ROMButton)
-	APKButton.controlLeft(AddonButton)
-	
-	ROMButton.controlRight(EmuButton)
-	ROMButton.controlLeft(APKButton)
-	
-	EmuButton.controlRight(AddonButton)
-	EmuButton.controlLeft(ROMButton)
+		EmuButton.controlRight(AddonButton)
+		EmuButton.controlLeft(ROMButton)
 	
 
-window.connectEventList(
-	[pyxbmct.ACTION_MOVE_DOWN,
-	pyxbmct.ACTION_MOVE_UP,
-	pyxbmct.ACTION_MOUSE_WHEEL_DOWN,
-	pyxbmct.ACTION_MOUSE_WHEEL_UP,
-	pyxbmct.ACTION_MOUSE_MOVE],
-	list_update)
+	def AddonInstall(self, _name):
+		link = wiz.openURL(ADDONFILE).replace('\n','').replace('\r','').replace('\t','').replace('repository=""', 'repository="none"').replace('repositoryurl=""', 'repositoryurl="http://"').replace('repositoryxml=""', 'repositoryxml="http://"')
+		match = re.compile('name="%s".+?lugin="(.+?)".+?rl="(.+?)".+?epository="(.+?)".+?epositoryxml="(.+?)".+?epositoryurl="(.+?)".+?con="(.+?)".+?anart="(.+?)".+?dult="(.+?)".+?escription="(.+?)"' % _name).findall(link)
+		if len(match) > 0:
+			for _plugin, _url, repository, repositoryxml, repositoryurl, icon, fanart, adult, description in match:
+				if _plugin.lower() == 'skin':
+					skinInstaller(_name, _url)
+				elif plugin.lower() == 'pack':
+					packInstaller(_name, _url)
+				else:
+					addonInstaller(_plugin, _url)
 
 ##globals
 global ver
@@ -4519,60 +4277,11 @@ global buildbgA
 global buildinfobg
 
 ##################window##########################
-window.setGeometry(1280, 720, 100, 50)# Create Window (width,height,rows,cols)
-fan=pyxbmct.Image(MAINBG)
-window.placeControl(fan, -10, -6, 125, 62)
-wiz.FTGlog('Window Opened')
+
 
 ##########Foreground Leave here####################
 
-listbg = pyxbmct.Image(LISTBG)
-window.placeControl(listbg, 10, 0, 80, 17)
 
-buildbg = pyxbmct.Image(LISTBG)
-window.placeControl(buildbg, 10, 16, 80, 35)
-
-buildinfobg = pyxbmct.Image(LISTBG)
-window.placeControl(buildinfobg, 88, 0, 23, 50)
-
-listbgA = pyxbmct.Image(LISTBG)
-window.placeControl(listbgA, 20, 0, 80, 17)
-
-buildbgA = pyxbmct.Image(LISTBG)
-window.placeControl(buildbgA, 20, 16, 80, 35)
-
-maintbg = pyxbmct.Image(LISTBG)
-window.placeControl(maintbg, 70, 19, 40, 32)
-
-sysinfobg = pyxbmct.Image(LISTBG)
-window.placeControl(sysinfobg, 10, 19, 60, 32)
-
-netinfobg = pyxbmct.Image(LISTBG)
-window.placeControl(netinfobg, 10, 0, 60, 20)
-
-speedthumb = pyxbmct.Image(SpeedBG)
-window.placeControl(speedthumb, 70, 0, 40, 20)
-
-splash = pyxbmct.Image(SPLASH)
-window.placeControl(splash , 10, 1, 100, 48)
-
-bakresbg = pyxbmct.Image(LISTBG)
-window.placeControl(bakresbg , 10, 1, 100, 48)
-
-toolsbg = pyxbmct.Image(LISTBG)
-window.placeControl(toolsbg , 10, 1, 100, 48)
-
-wizinfogb = pyxbmct.Image(LISTBG)
-window.placeControl(wizinfogb, -6, 9, 9, 32)
-
-wiz_title =  pyxbmct.Label('[COLOR %s][B]%s[/B][/COLOR]' % (uservar.WIZTITLE_COLOR ,uservar.WIZTITLE))
-window.placeControl(wiz_title, -5, 11, 7, 20)
-
-wiz_ver =  pyxbmct.Label('[COLOR %s]Version: [COLOR %s][B]%s[/B][/COLOR]' % (uservar.VERTITLE_COLOR,uservar.VER_NUMBER_COLOR,VERSION))
-window.placeControl(wiz_ver, -5, 31, 7, 10)
-
-no_txt = pyxbmct.Image(NOTXT)
-window.placeControl(no_txt, 23, 8, 80, 35)
 
 
 ################################################################################
@@ -4585,51 +4294,6 @@ global ToolsButton
 global BuildsButton
 global Toolbox
 
-#buttons/objects
-BuildsButton= pyxbmct.Button('[COLOR %s][B]Builds[/B][/COLOR]' % MAIN_BUTTONS_TEXT, focusTexture=FBUTTON,noFocusTexture=BUTTON)
-window.placeControl(BuildsButton,-2 , 1 , 13, 8)
-window.connect(BuildsButton, lambda: BuildList())
-
-MaintButton = pyxbmct.Button('[COLOR %s][B]Maintenance[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-window.placeControl(MaintButton,2 , 9 , 9, 8)
-window.connect(MaintButton, lambda: Maint())
-
-BackResButton = pyxbmct.Button('[COLOR %s][B]Backup/Restore[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-window.placeControl(BackResButton,2 , 17, 9, 8)
-window.connect(BackResButton, lambda: BackRes())
-
-ToolsButton = pyxbmct.Button('[COLOR %s][B]Tools[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-window.placeControl(ToolsButton,2 , 25, 9, 8)
-window.connect(ToolsButton, lambda: Tools())
-
-InstallablesButton = pyxbmct.Button('[COLOR %s][B]Installables[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=FBUTTON,noFocusTexture=BUTTON)
-window.placeControl(InstallablesButton,2 , 33, 9, 8)
-window.connect(InstallablesButton, lambda: Installables())
-
-CloseButton = pyxbmct.Button('[COLOR %s][B]EXIT[/B][/COLOR]' % MAIN_BUTTONS_TEXT,focusTexture=EXIT,noFocusTexture=BUTTON)
-window.placeControl(CloseButton,-2 , 41,13, 8)
-window.connect(CloseButton, window.close)
-
-BuildsButton.controlRight(MaintButton)
-BuildsButton.controlLeft(CloseButton)
-
-MaintButton.controlRight(BackResButton)
-MaintButton.controlLeft(BuildsButton)
-
-BackResButton.controlRight(ToolsButton)
-BackResButton.controlLeft(MaintButton)
-
-ToolsButton.controlRight(InstallablesButton)
-ToolsButton.controlLeft(BackResButton)
-
-InstallablesButton.controlRight(CloseButton)
-InstallablesButton.controlLeft(ToolsButton)
-
-CloseButton.controlRight(BuildsButton)
-CloseButton.controlLeft(InstallablesButton)
-
-
-
 ############# SOP ###############
 #     button.controlUp(button)
 #     button.controlLeft(button)
@@ -4637,41 +4301,49 @@ CloseButton.controlLeft(InstallablesButton)
 #     button.controlDown(button)
 ##################################
 
+p = dict(parse_qsl(sys.argv[2][1:]))
+xbmc.log(str(p),xbmc.LOGDEBUG)
+name = p.get('name', '')
+url = p.get('url', '')
+mode = p.get('mode', None)
+iconimage = p.get('iconimage', ICON)
+fanart = p.get('fanart', FANART)
+description = p.get('description', '')
+    
+if mode is None:
+    gui = Guiwiz()
+    gui.doModal()
+    del gui
 
-#################################################
-################!!!!!NEVER DELETE!!!!############
-#################################################
+elif mode == 'clearthumbs':
+	clearThumb(shortcut=True)
 
+elif mode == 'clearpackages':
+	clearPackages(shortcut=True)
 
-window.connect(pyxbmct.ACTION_NAV_BACK, window.close)
-## Event Lists
-window.setFocus(BuildsButton)
+elif mode == 'clearcache':
+	clearCache(shortcut=True)
 
-###Hide everthing initial menu
-HIDEALL()
-splash.setVisible(True)
+elif mode == 'totalclean':
+	totalClean(shortcut=True)
 
+elif mode == 'forceclose':
+	os._exit(1)
 
+elif mode == 'install':
+    buildWizard(name, url)
 
-###NEEDS WORK
-#if wiz.getS('ogwiz') =='true':
-#	index()
-##################################################################################
-##################################################################################
+elif mode == 'speedtest':
+    speed()	
 
-if   mode=='index'          : index()
+'''
 elif mode=='wizardupdate'   : wiz.wizardUpdate()
 elif mode=='builds'         : buildMenu()
 elif mode=='viewbuild'      : viewBuild(name)
 elif mode=='buildinfo'      : buildInfo(name)
 elif mode=='buildpreview'   : buildVideo(name)
-elif mode=='install'        : buildWizard(name, url)
 elif mode=='theme'          : buildWizard(name, mode, url)
-elif mode=='viewthirdparty' : viewThirdList(name)
-elif mode=='installthird'   : thirdPartyInstall(name, url)
-elif mode=='editthird'      : editThirdParty(name); wiz.refresh()
 elif mode=='maint'          : maintMenu(name)
-elif mode=='kodi17fix'      : wiz.kodi17Fix()
 elif mode=='unknownsources' : skinSwitch.swapUS()
 elif mode=='advancedsetting': advancedWindow(name)
 elif mode=='autoadvanced1'  : showAutoAdvanced1(); wiz.refresh()
@@ -4711,11 +4383,11 @@ elif mode=='viewlog'        : LogViewer()
 elif mode=='viewwizlog'     : LogViewer(WIZLOG)
 elif mode=='viewerrorlog'   : errorChecking()
 elif mode=='viewerrorlast'  : errorChecking(last=True)
-elif mode=='clearwizlog'    : f = open(WIZLOG, 'w'); f.close(); wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Wizard Log Cleared![/COLOR]" % COLOR2)
+elif mode=='clearwizlog'    : f = open(WIZLOG, 'w', encoding='utf-8'); f.close(); wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Wizard Log Cleared![/COLOR]" % COLOR2)
 elif mode=='purgedb'        : purgeDb()
 elif mode=='fixaddonupdate' : fixUpdate()
 elif mode=='removeaddons'   : removeAddonMenu()
-elif mode=='removeaddon'    : removeAddon(name)
+#elif mode=='removeaddon'    : removeAddon(name)
 elif mode=='removeaddondata': removeAddonDataMenu()
 elif mode=='removedata'     : removeAddonData(name)
 elif mode=='resetaddon'     : total = wiz.cleanHouse(ADDONDATA, ignore=True); wiz.LogNotify("[COLOR %s]%s[/COLOR]" % (COLOR1, ADDONTITLE), "[COLOR %s]Addon_Data reset[/COLOR]" % COLOR2)
@@ -4727,7 +4399,6 @@ elif mode=='restoreextzip'  : restoreextit('build')
 elif mode=='restoreextgui'  : restoreextit('gui')
 elif mode=='restoreextaddon': restoreextit('addondata')
 elif mode=='writeadvanced'  : writeAdvanced(name, url)
-elif mode=='speedtest'      : speedTest()
 elif mode=='speed'          : speed(); wiz.refresh()# changed from runspeedtest = build conflict
 elif mode=='clearspeedtest' : clearSpeedTest(); wiz.refresh()
 elif mode=='viewspeedtest'  : viewSpeedTest(name); wiz.refresh()
@@ -4762,14 +4433,6 @@ elif mode=='cleardebrid'    : debridit.clearSaved(name)
 elif mode=='authdebrid'     : debridit.activateDebrid(name); wiz.refresh()
 elif mode=='updatedebrid'   : debridit.autoUpdate('all')
 elif mode=='importdebrid'   : debridit.importlist(name); wiz.refresh()
-elif mode=='alluc'          : allucMenu()
-elif mode=='savealluc'      : allucit.allucIt('update',      name)
-elif mode=='restorealluc'   : allucit.allucIt('restore',     name)
-elif mode=='addonalluc'     : allucit.allucIt('clearaddon',  name)
-elif mode=='clearalluc'     : allucit.clearSaved(name)
-elif mode=='authalluc'      : allucit.activateAlluc(name); wiz.refresh()
-elif mode=='updatealluc'    : allucit.autoUpdate('all')
-elif mode=='importalluc'    : allucit.importlist(name); wiz.refresh()
 elif mode=='login'          : loginMenu()
 elif mode=='savelogin'      : loginit.loginIt('update',      name)
 elif mode=='restorelogin'   : loginit.loginIt('restore',     name)
@@ -4801,12 +4464,12 @@ elif mode=='apk1'           : apkMenu()
 elif mode=='apkgame'        : APKGAME(url)
 elif mode=='select'         : APKSELECT2(url)
 elif mode=='grab'           : APKGRAB(name,url)
-elif mode=='rom'            : romMenu(url)
-elif mode=='apkscrape'      : APK()
+elif mode=='rom'            : romlist(url)
+elif mode=='apkscrape'      : apkScraper()
 elif mode=='apkshow'        : apkshowMenu(url)
-elif mode=='apkkodi'        : apkkodiMenu()
-elif mode=='apkinstall'     : apkInstaller(name, url,"None")
-elif mode=='APPINSTALLER'   : APPINSTALL(name,url,description)
+elif mode=='apkkodi'        : apkMenu()
+elif mode=='apkinstall'     : apkInstaller(name, url)
+#elif mode=='APPINSTALLER'   : APPINSTALLER(name,url,description)
 elif mode=='ftgmod'         : ftgmod()
 elif mode=='viewpack'       : viewpack()
 elif mode=='addonpackwiz'   : addonpackwiz()
@@ -4821,11 +4484,13 @@ elif mode=='rompackmenu'    : rompackmenu()
 elif mode=='UNZIPROM'       : UNZIPROM()
 elif mode=='ftgmod'         : ftgmod()
 elif mode=='GetList'        : GetList(url)
-elif mode=='autoadvanced'   : notify.autoConfig2(); wiz.refresh()
+elif mode=='autoadvanced'   : notify.autoConfig(); wiz.refresh()
 elif mode=='autoconfig'     : autoconfig()
-elif mode=='sswap'          : skinSwitch.popUPmenu()
+#elif mode=='sswap'          : skinSwitch.popUPmenu()
 ### You have found my Lucky Charms !!
 #MKDIRS()
 window.connect(pyxbmct.ACTION_NAV_BACK, window.close)
 window.doModal()
 del window
+'''
+#router(sys.argv[2][1:])

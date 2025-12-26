@@ -1,21 +1,19 @@
-import os, xbmc, xbmcaddon
-import binascii
+import os, xbmcaddon
 #########################################################
 ### User Edit Variables #################################
 #########################################################
 # Enable/Disable the text file caching with 'Yes' or 'No' and age being how often it rechecks in minutes
 CACHETEXT      = 'Yes'
 CACHEAGE       = 30
-
 ADDON_ID       = xbmcaddon.Addon().getAddonInfo('id')
 ADDONTITLE     = '[B][COLOR yellow]>>>>>>>>[COLOR white]EzzerMac Wizard[COLOR yellow]<<<<<<<<[/COLOR][/B]'
 BUILDERNAME    = 'EzzerMac'
 #########################Make sure to change the repo to yours!!!!
-EXCLUDES       = [ADDON_ID, 'repository.EzzerMacsWizard', 'My_Builds', 'backupdir']
+EXCLUDES       = [ADDON_ID, 'roms', 'My_Builds', 'backupdir']
 BUILDFILE      = 'https://raw.githubusercontent.com/ezzerman12345/ez/refs/heads/main/Buildk19.txt'
 UPDATECHECK    = 0
 APKFILE        = 'http://'
-YOUTUBETITLE   = 'http://'
+YOUTUBETITLE   = 'http://' 
 YOUTUBEFILE    = 'http://'
 ADDONFILE      = 'http://'
 ADVANCEDFILE   = 'http://'
@@ -39,7 +37,8 @@ ART            = os.path.join(PATH, 'resources', 'art')
 FOCUS_BUTTON_COLOR = 'yellow'
 EXIT_BUTTON_COLOR = 'white'
 #Highlight outline for lists
-HIGHLIGHT_LIST = 'purple'
+HIGHLIGHT_LIST = 'button_focus'
+HIGHLIGHT_LIST2 = 'MenuItemFO'
 ##No TXT file Banner
 NO_TXT_FILE = 'red'
 
@@ -112,8 +111,7 @@ ICONSETTINGS   = 'http://'
 # Hide the ====== seperators 'Yes' or 'No'
 HIDESPACERS    = 'No'
 # Character used in seperator
-SPACER         = '~'
-
+SPACER         = '*'
 # Message for Contact Page
 # Enable 'Contact' menu item 'Yes' hide or 'No' dont hide
 HIDECONTACT    = 'No'
@@ -159,9 +157,11 @@ HEADERTYPE     = 'Text'
 FONTHEADER     = 'Font25'
 HEADERMESSAGE  = 'EzzerMacs Wizard'
 # url to image if using Image 424x180
-HEADERIMAGE    = ''
+HEADERIMAGE    = 'Welcome To EzzerMacs Wizard'
 # Font for Notification Window
 FONTSETTINGS   = 'Font12'
 # Background for Notification Window
-BACKGROUND     = ''
+BACKGROUND     = os.path.join(ART, 'ContentPanel.png')
+BACKGROUND2     = os.path.join(ART, 'ContentPanel.png')
+BACKGROUND3     = os.path.join(ART, 'ContentPanel.png')
 ############################    #############################

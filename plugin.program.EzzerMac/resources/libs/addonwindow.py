@@ -5,28 +5,31 @@
 # with arbitrary UI made of Controls - decendants of xbmcgui.Control class.
 # The framework uses image textures from Kodi Confluence skin.
 #
-# Licence: GPL v.3 http://www.gnu.org/licenses/gpl.html
+# Licence: GPL v.3 <http://www.gnu.org/licenses/gpl.html>
 """
-``pyxbmct.addonwindow`` module contains all classes and constants of PyXBMCt framework
+This module contains all classes and constants of PyXBMCt framework
 """
 
 import os
 import xbmc
 import xbmcgui
-from xbmcaddon import Addon
+from .addonskin import Skin
 import uservar
 from resources.libs import wizard as wiz
-ADDON_ID = uservar.ADDON_ID
-ADDONPATH      = wiz.addonInfo(ADDON_ID,'path')
-_images  = os.path.join(ADDONPATH,   'resources', 'skins', 'DefaultSkin', 'media')
 
-# Text alighnment constants. Mixed variants are obtained by bit OR (|)
+ADDON_ID = uservar.ADDON_ID
+ADDONPATH = wiz.addonInfo(ADDON_ID, 'path')
+_images = os.path.join(ADDONPATH, 'resources', 'skins', 'DefaultSkin', 'media')
+
+skin = Skin()
+
+# Text alignment constants. Mixed variants are obtained by bit OR (|)
 ALIGN_LEFT = 0
 """Align left"""
 ALIGN_RIGHT = 1
 """Align right"""
 ALIGN_CENTER_X = 2
-"""Align center horisontally"""
+"""Align center horizontally"""
 ALIGN_CENTER_Y = 4
 """Align center vertically"""
 ALIGN_CENTER = 6
@@ -35,6 +38,7 @@ ALIGN_TRUNCATED = 8
 """Align truncated"""
 ALIGN_JUSTIFY = 10
 """Align justify"""
+
 
 # Kodi key action codes.
 # More codes available in xbmcgui module
@@ -64,7 +68,7 @@ ACTION_MOUSE_LEFT_CLICK = 100
 
 def _set_textures(textures, kwargs):
     """Set texture arguments for controls."""
-    for texture in textures.keys():
+    for texture in textures:
         if kwargs.get(texture) is None:
             kwargs[texture] = textures[texture]
 
@@ -82,13 +86,20 @@ class Label(xbmcgui.ControlLabel):
     
     Implements a simple text label.
 
-    :param label: string or unicode - text string.
-    :param font: string - font used for label text. (e.g. 'font13')
-    :param textColor: hexstring - color of enabled label's label. (e.g. '0xFFFFFFFF')
-    :param disabledColor: hexstring - color of disabled label's label. (e.g. '0xFFFF3300')
-    :param alignment: integer - alignment of label - *Note, see xbfont.h
-    :param hasPath: bool - True=stores a path / False=no path.
-    :param angle: integer - angle of control. (+ rotates CCW, - rotates CW)
+    :param label: text string
+    :type label: str
+    :param font: font used for label text. (e.g. ``'font13'``)
+    :type font: str
+    :param textColor: hex color code of enabled label's label. (e.g. ``'0xFFFFFFFF'``)
+    :type textColor: str
+    :param disabledColor: hex color code of disabled label's label. (e.g. ``'0xFFFF3300'``)
+    :type disabledColor: str
+    :param alignment: alignment of label. **Note**: see ``xbfont.h``
+    :type alignment: int
+    :param hasPath: ``True`` = stores a path / ``False`` = no path.
+    :type hasPath: bool
+    :param angle: angle of control. (``+`` rotates CCW, ``-`` rotates CW)
+    :type angle: int
 
     .. note:: After you create the control, you need to add it to the window with placeControl().
     
@@ -108,9 +119,12 @@ class FadeLabel(xbmcgui.ControlFadeLabel):
     
     Implements a text label that can auto-scroll very long text.
     
-    :param font: string - font used for label text. (e.g. 'font13')
-    :param textColor: hexstring - color of fadelabel's labels. (e.g. '0xFFFFFFFF')
-    :param _alignment: integer - alignment of label - *Note, see xbfont.h
+    :param font: font used for label text. (e.g. ``'font13'``)
+    :type font: str
+    :param textColor: hex color code of fadelabel's labels. (e.g. ``'0xFFFFFFFF'``)
+    :type textColor: str
+    :param _alignment: alignment of label. **Note**: see ``xbfont.h``
+    :type _alignment: int
     
     .. note:: After you create the control, you need to add it to the window with placeControl().
     
@@ -131,8 +145,10 @@ class TextBox(xbmcgui.ControlTextBox):
     Implements a box for displaying multi-line text.
     Long text is truncated from below. Also supports auto-scrolling.
     
-    :param font: string - font used for text. (e.g. 'font13')
-    :param textColor: hexstring - color of textbox's text. (e.g. '0xFFFFFFFF')
+    :param font: font used for text. (e.g. ``'font13'``)
+    :type font: str
+    :param textColor: hex color code of textbox's text. (e.g. ``'0xFFFFFFFF'``)
+    :type textColor: str
     
     .. note:: After you create the control, you need to add it to the window with placeControl().
     
@@ -150,12 +166,14 @@ class Image(xbmcgui.ControlImage):
     
     ControlImage class.
     
-    Implements a box for displaying .jpg, .png, and .gif images.
+    Implements a box for displaying ``.jpg``, ``.png``, and ``.gif`` images.
 
-    :param filename: string - image filename.
-    :param colorKey: hexString - (example, '0xFFFF3300')
-    :param aspectRatio: integer - (values 0 = stretch (default), 1 = scale up (crops), 2 = scale down (black bars)
-    :param colorDiffuse: hexString - (example, '0xC0FF0000' (red tint)).
+    :param filename: path or URL to an image file.
+    :type filename: str
+    :param aspectRatio: (values: ``0`` = stretch (default), ``1`` = scale up (crops), ``2`` = scale down (black bars)
+    :type aspectRatio: int
+    :param colorDiffuse: for example, ``'0xC0FF0000'`` (red tint)
+    :type colorDiffuse: str
     
     .. note:: After you create the control, you need to add it to the window with placeControl().
     
@@ -167,7 +185,14 @@ class Image(xbmcgui.ControlImage):
         return super(Image, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
-class Button(xbmcgui.ControlButton):
+class CompareMixin(object):
+    def __eq__(self, other):
+        if hasattr(other, 'getId'):
+            return self.getId() == other.getId()
+        return False
+
+
+class Button(CompareMixin, xbmcgui.ControlButton):
     """
     Button(label, focusTexture=None, noFocusTexture=None, textOffsetX=CONTROL_TEXT_OFFSET_X, textOffsetY=CONTROL_TEXT_OFFSET_Y, alignment=4, font=None, textColor=None, disabledColor=None, angle=0, shadowColor=None, focusedColor=None)
     
@@ -175,18 +200,30 @@ class Button(xbmcgui.ControlButton):
     
     Implements a clickable button.
 
-    :param label: string or unicode - text string.
-    :param focusTexture: string - filename for focus texture.
-    :param noFocusTexture: string - filename for no focus texture.
-    :param textOffsetX: integer - x offset of label.
-    :param textOffsetY: integer - y offset of label.
-    :param alignment: integer - alignment of label - *Note, see xbfont.h
-    :param font: string - font used for label text. (e.g. 'font13')
-    :param textColor: hexstring - color of enabled button's label. (e.g. '0xFFFFFFFF')
-    :param disabledColor: hexstring - color of disabled button's label. (e.g. '0xFFFF3300')
-    :param angle: integer - angle of control. (+ rotates CCW, - rotates CW)
-    :param shadowColor: hexstring - color of button's label's shadow. (e.g. '0xFF000000')
-    :param focusedColor: hexstring - color of focused button's label. (e.g. '0xFF00FFFF')
+    :param label: button caption
+    :type label: str
+    :param focusTexture: filename for focus texture.
+    :type focusTexture: str
+    :param noFocusTexture: filename for no focus texture.
+    :type noFocusTexture: str
+    :param textOffsetX: x offset of label.
+    :type textOffsetX: int
+    :param textOffsetY: y offset of label.
+    :type textOffsetY: int
+    :param alignment: alignment of label. **Note**: see ``xbfont.h``
+    :type alignment: int
+    :param font: font used for label text. (e.g. ``'font13'``)
+    :type font: str
+    :param textColor: hex color code of enabled button's label. (e.g. ``'0xFFFFFFFF'``)
+    :type textColor: str
+    :param disabledColor: hex color code of disabled button's label. (e.g. ``'0xFFFF3300'``)
+    :type disabledColor: str
+    :param angle: angle of control. (``+`` rotates CCW, ``-`` rotates CW)
+    :type angle: int
+    :param shadowColor: hex color code of button's label's shadow. (e.g. ``'0xFF000000'``)
+    :type shadowColor: str
+    :param focusedColor: hex color code of focused button's label. (e.g. ``'0xFF00FFFF'``)
+    :type focusedColor: str
     
     .. note:: After you create the control, you need to add it to the window with placeControl().
         
@@ -203,7 +240,7 @@ class Button(xbmcgui.ControlButton):
         return super(Button, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
-class RadioButton(xbmcgui.ControlRadioButton):
+class RadioButton(CompareMixin, xbmcgui.ControlRadioButton):
     """
     RadioButton(label, focusTexture=None, noFocusTexture=None, textOffsetX=None, textOffsetY=None, _alignment=None, font=None, textColor=None, disabledColor=None, angle=None, shadowColor=None, focusedColor=None, focusOnTexture=None, noFocusOnTexture=None, focusOffTexture=None, noFocusOffTexture=None)
     
@@ -211,22 +248,38 @@ class RadioButton(xbmcgui.ControlRadioButton):
     
     Implements a 2-state switch.
     
-    :param label: string or unicode - text string.
-    :param focusTexture: string - filename for focus texture.
-    :param noFocusTexture: string - filename for no focus texture.
-    :param textOffsetX: integer - x offset of label.
-    :param textOffsetY: integer - y offset of label.
-    :param _alignment: integer - alignment of label - *Note, see xbfont.h
-    :param font: string - font used for label text. (e.g. 'font13')
-    :param textColor: hexstring - color of enabled radio button's label. (e.g. '0xFFFFFFFF')
-    :param disabledColor: hexstring - color of disabled radio button's label. (e.g. '0xFFFF3300')
-    :param angle: integer - angle of control. (+ rotates CCW, - rotates CW)
-    :param shadowColor: hexstring - color of radio button's label's shadow. (e.g. '0xFF000000')
-    :param focusedColor: hexstring - color of focused radio button's label. (e.g. '0xFF00FFFF')
-    :param focusOnTexture: string - filename for radio focused/checked texture.
-    :param noFocusOnTexture: string - filename for radio not focused/checked texture.
-    :param focusOffTexture: string - filename for radio focused/unchecked texture.
-    :param noFocusOffTexture: string - filename for radio not focused/unchecked texture.
+    :param label: label text.
+    :type: str or unicode
+    :param focusTexture: filename for focus texture.
+    :type focusTexture: str
+    :param noFocusTexture: filename for no focus texture.
+    :type noFocusTexture: str
+    :param textOffsetX: x offset of label.
+    :type textOffsetX: int
+    :param textOffsetY: y offset of label.
+    :type textOffsetY: int
+    :param _alignment: alignment of label - *Note, see xbfont.h
+    :type _alignment: int
+    :param font: font used for label text. (e.g. 'font13')
+    :type font: str
+    :param textColor: hexstring -- color of enabled radio button's label. (e.g. '0xFFFFFFFF')
+    :type textColor: str
+    :param disabledColor: hexstring -- color of disabled radio button's label. (e.g. '0xFFFF3300')
+    :type disabledColor: str
+    :param angle: angle of control. (+ rotates CCW, - rotates CW)
+    :type angle: int
+    :param shadowColor: hexstring -- color of radio button's label's shadow. (e.g. '0xFF000000')
+    :type shadowColor: str
+    :param focusedColor: hexstring -- color of focused radio button's label. (e.g. '0xFF00FFFF')
+    :type focusedColor: str
+    :param focusOnTexture: filename for radio focused/checked texture.
+    :type focusOnTexture: str
+    :param noFocusOnTexture: filename for radio not focused/checked texture.
+    :type noFocusOnTexture: str
+    :param focusOffTexture: filename for radio focused/unchecked texture.
+    :type focusOffTexture: str
+    :param noFocusOffTexture: filename for radio not focused/unchecked texture.
+    :type noFocusOffTexture: str
     
     .. note:: To customize RadioButton all 4 abovementioned textures need to be provided.
     
@@ -237,7 +290,7 @@ class RadioButton(xbmcgui.ControlRadioButton):
         self.radiobutton = RadioButton('Status', font='font14')
     """
     def __new__(cls, *args, **kwargs):
-        if int(xbmc.getInfoLabel('System.BuildVersion')[:2]) >= 13:
+        if xbmc.getInfoLabel('System.BuildVersion')[:2] >= '13':
             textures = {'focusTexture': os.path.join(_images, 'RadioButton', 'MenuItemFO.png'),
                         'noFocusTexture': os.path.join(_images, 'RadioButton', 'MenuItemNF.png'),
                         'focusOnTexture': os.path.join(_images, 'RadioButton', 'radiobutton-focus.png'),
@@ -253,7 +306,7 @@ class RadioButton(xbmcgui.ControlRadioButton):
         return super(RadioButton, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
-class Edit(xbmcgui.ControlEdit):
+class Edit(CompareMixin, xbmcgui.ControlEdit):
     """
     Edit(label, font=None, textColor=None, disabledColor=None, _alignment=0, focusTexture=None, noFocusTexture=None, isPassword=False)
     
@@ -261,18 +314,26 @@ class Edit(xbmcgui.ControlEdit):
     
     Implements a clickable text entry field with an on-screen keyboard.
 
-    :param label: string or unicode - text string.
-    :param font: [opt] string - font used for label text. (e.g. 'font13')
-    :param textColor: [opt] hexstring - color of enabled label's label. (e.g. '0xFFFFFFFF')
-    :param disabledColor: [opt] hexstring - color of disabled label's label. (e.g. '0xFFFF3300')
-    :param _alignment: [opt] integer - alignment of label - *Note, see xbfont.h
-    :param focusTexture: [opt] string - filename for focus texture.
-    :param noFocusTexture: [opt] string - filename for no focus texture.
-    :param isPassword: [opt] bool - if true, mask text value.
+    :param label: text string.
+    :type label: str or unicode
+    :param font: [opt] font used for label text. (e.g. 'font13')
+    :type font: str
+    :param textColor: [opt] hexstring -- color of enabled label's label. (e.g. '0xFFFFFFFF')
+    :type textColor: str
+    :param disabledColor: [opt] hexstring -- color of disabled label's label. (e.g. '0xFFFF3300')
+    :type disabledColor: str
+    :param _alignment: [opt] lignment of label - *Note, see xbfont.h
+    :type _alignment: int
+    :param focusTexture: [opt] filename for focus texture.
+    :type focusTexture: str
+    :param noFocusTexture: [opt] filename for no focus texture.
+    :type noFocusTexture: str
+    :param isPassword: [opt] if ``True``, mask text value.
+    :type isPassword: bool
     
     .. note:: You can use the above as keywords for arguments and skip certain optional arguments.
         Once you use a keyword, all following arguments require the keyword.
-        After you create the control, you need to add it to the window with ``palceControl()``.
+        After you create the control, you need to add it to the window with ``placeControl()``.
     
     Example::
     
@@ -285,7 +346,7 @@ class Edit(xbmcgui.ControlEdit):
         return super(Edit, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
-class List(xbmcgui.ControlList):
+class List(CompareMixin, xbmcgui.ControlList):
     """
     List(font=None, textColor=None, buttonTexture=None, buttonFocusTexture=None, selectedColor=None, _imageWidth=10, _imageHeight=10, _itemTextXOffset=10, _itemTextYOffset=2, _itemHeight=27, _space=2, _alignmentY=4)
     
@@ -313,23 +374,24 @@ class List(xbmcgui.ControlList):
         self.cList = List('font14', space=5)
     """
     def __new__(cls, *args, **kwargs):
-        textures = {'buttonTexture': os.path.join(_images, 'List', 'MenuItemNF1.png'),
-                    'buttonFocusTexture': os.path.join(_images, 'List', 'MenuItemFO1.png')}
+        textures = {'buttonTexture': os.path.join(_images, 'List', 'MenuItemNF.png'),
+                    'buttonFocusTexture': os.path.join(_images, 'List', 'MenuItemFO.png')}
         _set_textures(textures, kwargs)
         return super(List, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
-class Slider(xbmcgui.ControlSlider):
+class Slider(CompareMixin, xbmcgui.ControlSlider):
     """
-    Slider(textureback=None, texture=None, texturefocus=None)
+    Slider(textureback=None, texture=None, texturefocus=None, orientation=xbmcgui.HORIZONTAL)
     
     ControlSlider class.
     
     Implements a movable slider for adjusting some value.
     
-    :param textureback: string - image filename.
-    :param texture: string - image filename.
-    :param texturefocus: string - image filename.
+    :param textureback: string -- image filename.
+    :param texture: string -- image filename.
+    :param texturefocus: string -- image filename.
+    :param orientation: int -- slider orientation
     
     .. note:: After you create the control, you need to add it to the window with placeControl().
     
@@ -342,6 +404,8 @@ class Slider(xbmcgui.ControlSlider):
                     'texture': os.path.join(_images, 'Slider', 'osd_slider_nibNF.png'),
                     'texturefocus': os.path.join(_images, 'Slider', 'osd_slider_nib.png')}
         _set_textures(textures, kwargs)
+        if xbmc.getInfoLabel('System.BuildVersion')[:2] >= '17':
+            kwargs['orientation'] = xbmcgui.HORIZONTAL
         return super(Slider, cls).__new__(cls, -10, -10, 1, 1, *args, **kwargs)
 
 
@@ -388,8 +452,8 @@ class AbstractWindow(object):
             self.x = pos_x
             self.y = pos_y
         else:
-            self.x = 640 - self.width/2
-            self.y = 360 - self.height/2
+            self.x = 640 - self.width // 2
+            self.y = 360 - self.height // 2
         self._setGrid()
 
     def _setGrid(self):
@@ -400,8 +464,8 @@ class AbstractWindow(object):
         """
         self.grid_x = self.x
         self.grid_y = self.y
-        self.tile_width = self.width / self.columns
-        self.tile_height = self.height / self.rows
+        self.tile_width = self.width // self.columns
+        self.tile_height = self.height // self.rows
 
     def placeControl(self, control, row, column, rowspan=1, columnspan=1, pad_x=5, pad_y=5):
         """
@@ -523,7 +587,7 @@ class AbstractWindow(object):
         try:
             self.disconnect(event)
         except AddonWindowError:
-            if type(event) == int:
+            if isinstance(event, int):
                 self.actions_connected.append([event, callable])
             else:
                 self.controls_connected.append([event, callable])
@@ -554,7 +618,7 @@ class AbstractWindow(object):
 
             self.disconnect(ACTION_NAV_BACK)
         """
-        if type(event) == int:
+        if isinstance(event, int):
              event_list = self.actions_connected
         else:
              event_list = self.controls_connected
@@ -584,7 +648,7 @@ class AbstractWindow(object):
         This is a helper method not to be called directly.
         """
         for item in connected_list:
-            if event == item[0]:
+            if item[0] == event:
                 item[1]()
                 break
 
@@ -644,30 +708,22 @@ class AddonWindow(AbstractWindow):
         This is a helper method not to be called directly.
         """
         # Window background image
-        self.background_img = os.path.join(_images, 'AddonWindow', 'ContentPanel.png')
+        self.background_img = skin.background_img
         # Background for a window header
-        self.title_background_img = os.path.join(_images, 'AddonWindow', 'dialogheader.png')
-        # Horisontal adjustment for a header background if the main background has transparent edges.
-        self.X_MARGIN = 5
-        # Vertical adjustment for a header background if the main background has transparent edges
-        self.Y_MARGIN = 5
-        # Header position adjustment if the main backround has visible borders.
-        self.Y_SHIFT = 4
-        # The height of a window header (for the title background and the title label).
-        self.HEADER_HEIGHT = 35
+        self.title_background_img = skin.title_background_img
         self.background = xbmcgui.ControlImage(-10, -10, 1, 1, self.background_img)
         self.addControl(self.background)
         self.setAnimation(self.background)
         self.title_background = xbmcgui.ControlImage(-10, -10, 1, 1, self.title_background_img)
         self.addControl(self.title_background)
         self.setAnimation(self.title_background)
-        self.title_bar = xbmcgui.ControlLabel(-10, -10, 1, 1, title, alignment=ALIGN_CENTER, textColor='0xFFFFA500',
-                                                                        font='font13_title')
+        self.title_bar = xbmcgui.ControlLabel(-10, -10, 1, 1, title, alignment=skin.header_align,
+                                              textColor=skin.header_text_color, font='font13_title')
         self.addControl(self.title_bar)
         self.setAnimation(self.title_bar)
-        self.window_close_button = xbmcgui.ControlButton(-100, -100, 60, 30, '',
-                        focusTexture=os.path.join(_images, 'AddonWindow', 'DialogCloseButton-focus.png'),
-                        noFocusTexture=os.path.join(_images, 'AddonWindow', 'DialogCloseButton.png'))
+        self.window_close_button = xbmcgui.ControlButton(-100, -100, skin.close_btn_width, skin.close_btn_height, '',
+                        focusTexture=skin.close_button_focus,
+                        noFocusTexture=skin.close_button_no_focus)
         self.addControl(self.window_close_button)
         self.setAnimation(self.window_close_button)
 
@@ -696,13 +752,15 @@ class AddonWindow(AbstractWindow):
         self.background.setPosition(self.x, self.y)
         self.background.setWidth(self.width)
         self.background.setHeight(self.height)
-        self.title_background.setPosition(self.x + self.X_MARGIN, self.y + self.Y_MARGIN + self.Y_SHIFT)
-        self.title_background.setWidth(self.width - 2 * self.X_MARGIN)
-        self.title_background.setHeight(self.HEADER_HEIGHT)
-        self.title_bar.setPosition(self.x + self.X_MARGIN, self.y + self.Y_MARGIN + self.Y_SHIFT)
-        self.title_bar.setWidth(self.width - 2 * self.X_MARGIN)
-        self.title_bar.setHeight(self.HEADER_HEIGHT)
-        self.window_close_button.setPosition(self.x + self.width - 70, self.y + self.Y_MARGIN + self.Y_SHIFT)
+        self.title_background.setPosition(self.x + skin.x_margin, self.y + skin.y_margin + skin.title_back_y_shift)
+        self.title_background.setWidth(self.width - 2 * skin.x_margin)
+        self.title_background.setHeight(skin.header_height)
+        self.title_bar.setPosition(self.x + skin.x_margin + skin.title_bar_x_shift,
+                                   self.y + skin.y_margin + skin.title_bar_y_shift)
+        self.title_bar.setWidth(self.width - 2 * skin.x_margin)
+        self.title_bar.setHeight(skin.header_height)
+        self.window_close_button.setPosition(self.x + self.width - skin.close_btn_x_offset,
+                                             self.y + skin.y_margin + skin.close_btn_y_offset)
 
     def _setGrid(self):
         """
@@ -710,11 +768,11 @@ class AddonWindow(AbstractWindow):
 
         This is a helper method not to be called directly.
         """
-        self.grid_x = self.x + self.X_MARGIN + self.win_padding
-        self.grid_y = self.y + self.Y_MARGIN + self.Y_SHIFT + self.HEADER_HEIGHT + self.win_padding
-        self.tile_width = (self.width - 2 * (self.X_MARGIN + self.win_padding))/self.columns
-        self.tile_height = (
-                    self.height - self.HEADER_HEIGHT - self.Y_SHIFT - 2 * (self.Y_MARGIN + self.win_padding))/self.rows
+        self.grid_x = self.x + skin.x_margin + self.win_padding
+        self.grid_y = self.y + skin.y_margin + skin.title_back_y_shift + skin.header_height + self.win_padding
+        self.tile_width = (self.width - 2 * (skin.x_margin + self.win_padding)) // self.columns
+        self.tile_height = ((self.height - skin.header_height - skin.title_back_y_shift -
+                             2 * (skin.y_margin + self.win_padding)) // self.rows)
 
     def setWindowTitle(self, title=''):
         """
@@ -755,7 +813,8 @@ class FullWindowMixin(xbmcgui.Window):
 
         ``control`` is an instance of :class:`xbmcgui.Control` class.
         """
-        if control == self.window_close_button:
+        if (hasattr(self, 'window_close_button') and
+                control.getId() == self.window_close_button.getId()):
             self.close()
         else:
             self._executeConnected(control, self.controls_connected)
@@ -782,13 +841,14 @@ class DialogWindowMixin(xbmcgui.WindowDialog):
 
         ``control`` is an instance of :class:`xbmcgui.Control` class.
         """
-        if control == self.window_close_button:
+        if (hasattr(self, 'window_close_button') and
+                control.getId() == self.window_close_button.getId()):
             self.close()
         else:
             self._executeConnected(control, self.controls_connected)
 
 
-class BlankFullWindow(FullWindowMixin, AbstractWindow):
+class BlankFullWindow(AbstractWindow, FullWindowMixin):
     """
     BlankFullWindow()
 
@@ -801,7 +861,7 @@ class BlankFullWindow(FullWindowMixin, AbstractWindow):
     pass
 
 
-class BlankDialogWindow(DialogWindowMixin, AbstractWindow):
+class BlankDialogWindow(AbstractWindow, DialogWindowMixin):
     """
     BlankDialogWindow()
 
@@ -814,7 +874,7 @@ class BlankDialogWindow(DialogWindowMixin, AbstractWindow):
     pass
 
 
-class AddonFullWindow(FullWindowMixin, AddonWindow):
+class AddonFullWindow(AddonWindow, FullWindowMixin):
 
     """
     AddonFullWindow(title='')
@@ -839,7 +899,7 @@ class AddonFullWindow(FullWindowMixin, AddonWindow):
         Set the image for for the fullscreen background.
         """
         # Image for the fullscreen background.
-        self.main_bg_img = os.path.join(_images, 'AddonWindow', 'SKINDEFAULT.jpg')
+        self.main_bg_img = skin.main_bg_img
         # Fullscreen background image control.
         self.main_bg = xbmcgui.ControlImage(1, 1, 1280, 720, self.main_bg_img)
         self.addControl(self.main_bg)
@@ -858,7 +918,7 @@ class AddonFullWindow(FullWindowMixin, AddonWindow):
         self.main_bg.setImage(image)
 
 
-class AddonDialogWindow(DialogWindowMixin, AddonWindow):
+class AddonDialogWindow(AddonWindow, DialogWindowMixin):
     """
     AddonDialogWindow(title='')
 

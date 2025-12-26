@@ -21,17 +21,16 @@
 # Tobias Ussing And Henrik Mosgaard Jensen for parseDOM
 # WhiteCream thread for clicking yes on dialog for unknown sources
 
-import xbmc, xbmcvfs, xbmcaddon, xbmcgui,re, os, glob, thread
+import xbmc, xbmcvfs, xbmcaddon, xbmcgui,re, os, glob, _thread
 from datetime import datetime
-try:    from sqlite3 import dbapi2 as database
-except: from pysqlite2 import dbapi2 as database
+from sqlite3 import dbapi2 as database
 
 def main():
 	class enableAll():
 		def __init__(self):
-			self.databasepath = xbmc.translatePath('special://database/')
-			self.addons       = xbmc.translatePath('special://home/addons/')
-			self.tempauto     = xbmc.translatePath('special://home/userdata/autoexec_temp.py')
+			self.databasepath = xbmcvfs.translatePath('special://database/')
+			self.addons       = xbmcvfs.translatePath('special://home/addons/')
+			self.tempauto     = xbmcvfs.translatePath('special://home/userdata/autoexec_temp.py')
 			self.dbfilename   = self.latestDB()
 			self.dbfilename   = os.path.join(self.databasepath, self.dbfilename)
 			self.swapUS()
@@ -67,7 +66,7 @@ def main():
 			
 		def log(self, msg, level=xbmc.LOGNOTICE):
 			try:
-				if isinstance(msg, unicode):
+				if isinstance(msg, str):
 					msg = '%s' % (msg.encode('utf-8'))
 				xbmc.log('[AutoExec.py]: %s' % msg, level)
 			except Exception as e:
@@ -80,7 +79,7 @@ def main():
 			highest = 0
 			for file in match:
 				try: check = int(re.compile(comp).findall(file)[0])
-				except Exception, e: check = 0; self.log(str(e))
+				except Exception as e: check = 0; self.log(str(e))
 				if highest < check:
 					highest = check
 			return '%s%s.db' % (DB, highest)
@@ -92,7 +91,7 @@ def main():
 			response = xbmc.executeJSONRPC(query)
 			self.log("Unknown Sources Get Settings: %s" % str(response), xbmc.LOGDEBUG)
 			if 'false' in response:
-				thread.start_new_thread(self.dialogWatch, ())
+				_thread.start_new_thread(self.dialogWatch, ())
 				xbmc.sleep(200)
 				query = '{"jsonrpc":"2.0", "method":"Settings.SetSettingValue","params":{"setting":%s,"value":%s}, "id":1}' % (new, value)
 				response = xbmc.executeJSONRPC(query)
@@ -114,7 +113,7 @@ def main():
 				try:
 					textdb = database.connect(self.dbfilename)
 					textexe = textdb.cursor()
-				except Exception, e:
+				except Exception as e:
 					self.log("DB Connection Error: %s" % str(e), xbmc.LOGERROR)
 					return False
 			else: return False
@@ -128,7 +127,7 @@ def main():
 						textexe.execute('UPDATE installed SET enabled = ? WHERE addonID = ? ', (state, item,))
 				textdb.commit()
 				textexe.close()
-			except Exception, e:
+			except Exception as e:
 				self.log("Erroring enabling addon: %s" % addon, xbmc.LOGERROR)
 	
 	try:
@@ -138,27 +137,27 @@ def main():
 		xbmcvfs.delete('special://userdata/autoexec.py')
 		xbmcvfs.copy('special://home/userdata/autoexec_temp.py', 'special://userdata/autoexec.py')
 		xbmcvfs.delete('special://userdata/autoexec_temp.py')
-	except Exception, e:
+	except Exception as e:
 		xbmcgui.Dialog().notification("AutoExec.py", "Error Check LogFile")
 		xbmc.log(str(e), xbmc.LOGERROR)
 		xbmcvfs.delete('special://userdata/autoexec.py')
 		xbmcvfs.copy('special://home/userdata/autoexec_temp.py', 'special://userdata/autoexec.py')
 		xbmcvfs.delete('special://userdata/autoexec_temp.py')
 
-def parseDOM(html, name=u"", attrs={}, ret=False):
+def parseDOM(html, name="", attrs={}, ret=False):
 	# Copyright (C) 2010-2011 Tobias Ussing And Henrik Mosgaard Jensen
 	if isinstance(html, str):
 		try:
 			html = [html.decode("utf-8")]
 		except:
 			html = [html]
-	elif isinstance(html, unicode):
+	elif isinstance(html, str):
 		html = [html]
 	elif not isinstance(html, list):
-		return u""
+		return ""
 
 	if not name.strip():
-		return u""
+		return ""
 
 	ret_lst = []
 	for item in html:
@@ -176,7 +175,7 @@ def parseDOM(html, name=u"", attrs={}, ret=False):
 				lst = lst2
 				lst2 = []
 			else:
-				test = range(len(lst))
+				test = list(range(len(lst)))
 				test.reverse()
 				for i in test:
 					if not lst[i] in lst2:
@@ -214,7 +213,7 @@ def parseDOM(html, name=u"", attrs={}, ret=False):
 		else:
 			lst2 = []
 			for match in lst:
-				endstr = u"</" + name
+				endstr = "</" + name
 
 				start = item.find(match)
 				end = item.find(endstr, start)
@@ -227,7 +226,7 @@ def parseDOM(html, name=u"", attrs={}, ret=False):
 					pos = item.find("<" + name, pos + 1)
 
 				if start == -1 and end == -1:
-					temp = u""
+					temp = ""
 				elif start > -1 and end > -1:
 					temp = item[start + len(match):end]
 				elif end > -1:

@@ -18,8 +18,17 @@
 ################################################################################
 
 version = 0.1
-import wizard as wiz
+from . import wizard as wiz
 import re
+from urllib.parse import urljoin
+
+# Define a default theme color or value for THEME1
+THEME1 = "default_theme"  # Replace with actual theme value as needed
+
+# Define addFile if not already defined or import it from the appropriate module
+def addFile(*args, **kwargs):
+	# Placeholder implementation; replace with actual logic as needed
+	print("addFile called with:", args, kwargs)
 
 
 def apkScraper(name=""):
@@ -89,6 +98,6 @@ def apkScraper(name=""):
 				download = tempurl
 				addFile(title, 'apkinstall', name, download)
 				x += 1
-			except Exception, e:
+			except Exception as e:
 				wiz.log("Error on: %s / %s" % (name, str(e)))
 		if x == 0: addFile("Error SPMC Scraper Is Currently Down.")

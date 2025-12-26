@@ -28,11 +28,9 @@ import os
 import re
 import socket
 import pyqrcode
-from urllib import urlencode
-from urllib import FancyURLopener
-import urllib2
-import urlparse
-import urllib
+from urllib.parse import urlencode
+from urllib.request import FancyURLopener
+import urllib.request, urllib.error, urllib.parse
 import json
 import xbmc
 import xbmcgui
@@ -52,8 +50,8 @@ DIALOG           = xbmcgui.Dialog()
 URL              = 'https://paste.ubuntu.com/'
 EXPIRATION       = 2592000
 REPLACES         = (('//.+?:.+?@', '//USER:PASSWORD@'),('<user>.+?</user>', '<user>USER</user>'),('<pass>.+?</pass>', '<pass>PASSWORD</pass>'),)
-HOME             = xbmc.translatePath('special://home/')
-LOG              = xbmc.translatePath('special://logpath/')
+HOME             = xbmcvfs.translatePath('special://home/')
+LOG              = xbmcvfs.translatePath('special://logpath/')
 USERDATA         = os.path.join(HOME,      'userdata')
 ADDONDATA        = os.path.join(USERDATA,  'addon_data', ADDON_ID)
 WIZLOG           = os.path.join(ADDONDATA, 'wizard.log')
@@ -209,7 +207,7 @@ class Main:
 
 		try:
 			page = url_opener.open(URL, params)
-		except Exception, e:
+		except Exception as e:
 			a = 'failed to connect to the server'
 			wiz.log("%s: %s" % (a, str(e)), xbmc.LOGERROR)
 			return False, a
@@ -218,7 +216,7 @@ class Main:
 			page_url = page.url.strip()
 			wiz.log("URL for %s: %s" % (name, page_url), xbmc.LOGNOTICE)
 			return True, page_url
-		except Exception, e:
+		except Exception as e:
 			a = 'unable to retrieve the paste url'
 			wiz.log("%s: %s" % (a, str(e)), xbmc.LOGERROR)
 			return False, a
@@ -235,7 +233,7 @@ class Main:
 					os.remove(imagefile)
 				except: 
 					pass
-			except Exception, e:
+			except Exception as e:
 				wiz.log(str(e), xbmc.LOGNOTICE)
 				confirm   = DIALOG.ok(ADDONTITLE, "[COLOR %s]%s[/COLOR]" % (COLOR2, message))
 		else:

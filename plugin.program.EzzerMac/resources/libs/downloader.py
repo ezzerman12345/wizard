@@ -17,22 +17,22 @@
 #  http://www.gnu.org/copyleft/gpl.html                                        #
 ################################################################################
 
-import xbmc, xbmcgui, urllib, sys, time, uservar
-import wizard as wiz
+import xbmc, xbmcgui, urllib.request, urllib.parse, urllib.error, sys, time, uservar
+from . import wizard as wiz
 
 ADDONTITLE     = uservar.ADDONTITLE
 COLOR1         = uservar.COLOR1
 COLOR2         = uservar.COLOR2
 
-urllib.URLopener.version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36 SE 2.X MetaSr 1.0'
+urllib.request.URLopener.version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36 SE 2.X MetaSr 1.0'
 
 def download(url, dest, dp = None):
 	if not dp:
 		dp = xbmcgui.DialogProgress()
-		dp.create(ADDONTITLE ,"Downloading Content",' ', ' ')
+		dp.create(ADDONTITLE, "Downloading Content")
 	dp.update(0)
 	start_time=time.time()
-	urllib.urlretrieve(url, dest, lambda nb, bs, fs: _pbhook(nb, bs, fs, dp, start_time))
+	urllib.request.urlretrieve(url, dest, lambda nb, bs, fs: _pbhook(nb, bs, fs, dp, start_time))
 
 def _pbhook(numblocks, blocksize, filesize, dp, start_time):
 	try: 
@@ -52,8 +52,8 @@ def _pbhook(numblocks, blocksize, filesize, dp, start_time):
 		mbs = '[COLOR %s][B]Size:[/B] [COLOR %s]%.02f[/COLOR] MB of [COLOR %s]%.02f[/COLOR] MB[/COLOR]' % (COLOR2, COLOR1, currently_downloaded, COLOR1, total) 
 		e   = '[COLOR %s][B]Speed:[/B] [COLOR %s]%.02f [/COLOR]%s/s ' % (COLOR2, COLOR1, kbps_speed, type_speed)
 		e  += '[B]ETA:[/B] [COLOR '+COLOR1+']%02d:%02d[/COLOR][/COLOR]' % divmod(eta, 60)
-		dp.update(percent, '', mbs, e)
-	except Exception, e:
+		dp.update(int(percent),  str(mbs) + '\n' + str(e))
+	except Exception as e:
 		wiz.log("ERROR Downloading: %s" % str(e), xbmc.LOGERROR)
 		pass
 	if dp.iscanceled(): 

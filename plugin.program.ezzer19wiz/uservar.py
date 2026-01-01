@@ -10,7 +10,7 @@ ADDONTITLE     = '[COLOR red]-[B]EzZeRmAnS Wizard[/B]-[/COLOR]'
 BUILDERNAME    = 'EzZeRmAnS Wiz'
 #########################Make sure to change the repo to yours!!!!
 EXCLUDES       = [ADDON_ID, 'roms', 'My_Builds', 'backupdir', 'script.module.kodi-six', 'script.module.six']
-BUILDFILE      = 'http://www.ezzer-mac.com/builds/Buildk19.txt'
+BUILDFILE      = 'https://raw.githubusercontent.com/ezzerman12345/ez/refs/heads/main/Buildk19.txt'
 UPDATECHECK    = 0
 APKFILE        = 'http://'
 YOUTUBETITLE   = 'FTG Help Videos' 

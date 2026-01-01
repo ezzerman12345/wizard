@@ -1,48 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addons>
-<addon id="plugin.program.EzzerMac" name="EzzerMac Wizard" version="1.2.6" provider-name="EzzerMac">
-	<requires>
-		<import addon="xbmc.python" version="3.0.0"/>
-		<import addon="script.module.kodi-six" version="0.0.5"/>
-		<import addon="script.module.certifi" version="2023.5.7"/>
-	</requires>
-	<extension point="xbmc.python.pluginsource" library="default.py">
+<addon id="plugin.program.ezzer19wiz" name="EzzerMans Wizard" version="1.1.2" provider-name="EzZeRmAn">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="script.module.six" />
+    <import addon="script.module.kodi-six" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>executable</provides>
-	</extension>
-	<extension point="xbmc.service" library="startup.py" start="startup" />
-	<extension point="xbmc.addon.metadata">
-		<summary lang="en">EzzerMacs Wizard</summary>
-		<description lang="en">There is everything you need in this Wizard from Repos to Addons To Wizards, A huge thanks to everyone who made it possible , Enjoy your stay.</description>
-		<platform>all</platform>
-		<assets>
-			<icon>icon.png</icon>
-			<fanart>fanart.jpg</fanart>
+  </extension>
+  <extension point="xbmc.service" library="startup.py" start="startup" />
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en">EzZeRmAnS Wizard</summary>
+    <description lang="en">In this wizard you will find the latest Matrix GUI Wizard and Tools. Thanks whufclee at NaN, GUYS at TI, Brackets for the app installer!! RomanVM for the PyXBMCt libs. Fire TV Guru for the PyXBMCt layout  Also a very special Thanks to Surfacingx for the base code used in this add-on.</description>
+    <platform>all</platform>
+    <assets>
+				<icon>icon.png</icon>
+				<fanart>fanart.jpg</fanart>
+				<banner></banner>
+				<clearlogo></clearlogo>
+				<screenshot></screenshot>
 		</assets>
-	</extension>
+  </extension>
 </addon>
 
-<addon id="repository.EzzerMacsWizard" name="EzzerMacs Wizard Repository" version="1.1.8" provider-name="EzzerMac">
-    <extension point="xbmc.addon.repository" name="EzzerMacs Wizard Repository">
+    <addon id="repository.EzzerMacsWizard" name="EzzerMacs Wizard Repository" version="1.1.7" provider-name="EzzerMac">
+        <extension point="xbmc.addon.repository" name="EzzerMacs Wizard Repository">
 		<dir>
-			<info compressed="false">https://raw.githubusercontent.com/ezzerman12345/wizard/master/_zipfiles/addons.xml</info>
-			<checksum>https://raw.githubusercontent.com/ezzerman12345/wizard/master/_zipfiles/addons.xml.md5</checksum>
-			<datadir zip="true">https://raw.githubusercontent.com/ezzerman12345/wizard/master/_zipfiles/</datadir>
-			<hashes>false</hashes>
+            <info compressed="false">http://www.ezzer-mac.com/_repo/addons.xml</info>
+            <checksum>http://www.ezzer-mac.com/_repo/addons.xml.md5</checksum>
+            <datadir zip="true">http://www.ezzer-mac.com/_repo/</datadir>
+			</dir>
+
+            <dir>
+			<info compressed="false">https://raw.githubusercontent.com/teamuniversal/scrapers/master/_modules4all/zips/addons.xml</info>
+			<checksum>https://raw.githubusercontent.com/teamuniversal/scrapers/master/_modules4all/zips/addons.xml.md5</checksum>
+			<datadir zip="true">https://raw.githubusercontent.com/teamuniversal/scrapers/master/_modules4all/zips/</datadir>
 		</dir>
-        <dir>
-           <info compressed="false">https://raw.githubusercontent.com/Gujal00/smrzips/master/addons.xml</info>
-           <checksum>https://raw.githubusercontent.com/Gujal00/smrzips/master/addons.xml.md5</checksum>
-           <datadir zip="true">https://raw.githubusercontent.com/Gujal00/smrzips/master/zips/</datadir>
+
+		<dir>
+            <info compressed="false">https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/</datadir>
         </dir>
-    </extension>
-    <extension point="xbmc.addon.metadata">
-        <summary lang="en_GB">Welcome to the New and Improved EZZERMACS WIZARD for all your Community Builds, All the Help and Assistance can be found Here</summary>
-        <description lang="en_GB">Repo from EzzerMan.</description>
-        <platform>all</platform>
-        <assets>
-            <icon>icon.png</icon>
-			<fanart>fanart.jpg</fanart>
-        </assets>
+
+		<dir>
+            <info compressed="false">https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/a4k-openproject/repository.openscrapers/master/zips/</datadir>
+        </dir>
+
+        <dir>
+            <info compressed="false">https://raw.githubusercontent.com/jenaddon/repository.jenrepo/master/zips/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/jenaddon/repository.jenrepo/master/zips/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/jenaddon/repository.jenrepo/master/zips/</datadir>
+            <hashes>false</hashes>
+        </dir>
+
+		<dir>
+			<info compressed="false">https://raw.githubusercontent.com/totalrevolution/python-koding/master/zips/addons.xml</info>
+			<checksum>https://raw.githubusercontent.com/totalrevolution/python-koding/master/zips/addons.xml.md5</checksum>
+			<datadir zip="true">https://raw.githubusercontent.com/totalrevolution/python-koding/master/zips/</datadir>
+		</dir>
+
+
+		<dir>
+            <info compressed="false">https://raw.githubusercontent.com/Gujal00/smrzips/master/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/Gujal00/smrzips/master/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/Gujal00/smrzips/master/zips/</datadir>
+        </dir>
+        </extension>
+        <extension point="xbmc.addon.metadata">
+            <summary>Install all the latest Builds</summary>
+            <description>Welcome to the New and Improved EZZERMACS WIZARD for all your Community Builds, All the Help and Assistance can be found Here</description>
+            <platform>all</platform>
+		<assets>
+		<icon>icon.png</icon>
+		<fanart>fanart.jpg</fanart>
+		</assets>
     </extension>
 </addon>
 </addons>

@@ -46,13 +46,13 @@
 #                                                                          #
 ############################################################################
 
-import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, xbmcvfs, glob
+import xbmc, xbmcaddon, xbmcgui, xbmcplugin, os, sys, xbmcvfs, glob
 import shutil
 import urllib.request, urllib.error, urllib.parse
 import re
 import uservar
 from datetime import date, datetime, timedelta
-from resources.libs import extract, downloader, notify, loginit, debridit, traktit, skinSwitch, uploadLog, wizard as wiz
+from resources.libs import extract, downloader, notify, loginit, debridit, allucit, traktit, skinSwitch, uploadLog, wizard as wiz
 
 ADDON_ID       = uservar.ADDON_ID
 ADDONTITLE     = uservar.ADDONTITLE
@@ -93,9 +93,11 @@ AUTOFEQ        = wiz.getS('autocleanfeq')
 AUTONEXTRUN    = wiz.getS('nextautocleanup')
 TRAKTSAVE      = wiz.getS('traktlastsave')
 REALSAVE       = wiz.getS('debridlastsave')
+ALLUCSAVE      = wiz.getS('alluclastsave')
 LOGINSAVE      = wiz.getS('loginlastsave')
 KEEPTRAKT      = wiz.getS('keeptrakt')
 KEEPREAL       = wiz.getS('keepdebrid')
+KEEPALLUC      = wiz.getS('keepalluc')
 KEEPLOGIN      = wiz.getS('keeplogin')
 INSTALLED      = wiz.getS('installed')
 EXTRACT        = wiz.getS('extract')
@@ -213,6 +215,22 @@ def checkSkin():
 
 while xbmc.Player().isPlayingVideo():
 	xbmc.sleep(1000)
+
+if KODIV >= 17:
+	NOW = datetime.now()
+	temp = wiz.getS('kodi17iscrap')
+	if not temp == '':
+		if temp > str(NOW - timedelta(minutes=2)):
+			wiz.log("Killing Start Up Script")
+			sys.exit()
+	wiz.log("%s" % (NOW))
+	wiz.setS('kodi17iscrap', str(NOW))
+	xbmc.sleep(1000)
+	if not wiz.getS('kodi17iscrap') == str(NOW):
+		wiz.log("Killing Start Up Script")
+		sys.exit()
+	else:
+		wiz.log("Continuing Start Up Script")
 
 if KODIADDONS in ADDONPATH:
 	wiz.log("Copying path to addons dir", xbmc.LOGINFO)
@@ -446,3 +464,6 @@ if int(total_sizetext2) > filesize_thumb:
 if wiz.getS('clearcache') == 'true':
 	wiz.clearCache(); wiz.refresh()
 	wiz.log("[Auto Cleaner] Thumbs Cleaner Triggered", xbmc.LOGINFO)
+	
+	
+wiz.setS('kodi17iscrap', '')

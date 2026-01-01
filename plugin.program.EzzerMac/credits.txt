@@ -21,11 +21,3 @@ WhufcLee, OpenEleq, Midraal :
 Various coding help  
 Barroni        : 
  Artwork for Advanced Settings Auto Configurator
-
-Open Source Code Citations:
-
-Based on or includes code from:
-- PyXBMCt by romanvm (https://github.com/romanvm/script.module.pyxbmct) [License: GPL v3]
-- repository.biyik by hbiyik (https://github.com/hbiyik/repository.biyik) [License: unknown, check repository]
-
-Please see the original repositories for more details. 

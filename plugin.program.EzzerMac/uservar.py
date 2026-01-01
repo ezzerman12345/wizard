@@ -6,14 +6,14 @@ import os, xbmcaddon
 CACHETEXT      = 'Yes'
 CACHEAGE       = 30
 ADDON_ID       = xbmcaddon.Addon().getAddonInfo('id')
-ADDONTITLE     = '[B][COLOR yellow]>>>>>>>>[COLOR white]EzzerMac Wizard[COLOR yellow]<<<<<<<<[/COLOR][/B]'
-BUILDERNAME    = 'EzzerMac'
+ADDONTITLE     = '[COLOR red]-[B]EzZeRmAnS Wizard[/B]-[/COLOR]'
+BUILDERNAME    = 'EzZeRmAnS Wiz'
 #########################Make sure to change the repo to yours!!!!
-EXCLUDES       = [ADDON_ID, 'roms', 'My_Builds', 'backupdir']
-BUILDFILE      = 'https://raw.githubusercontent.com/ezzerman12345/ez/refs/heads/main/Buildk19.txt'
+EXCLUDES       = [ADDON_ID, 'roms', 'My_Builds', 'backupdir', 'script.module.kodi-six', 'script.module.six']
+BUILDFILE      = 'http://www.ezzer-mac.com/builds/Buildk19.txt'
 UPDATECHECK    = 0
 APKFILE        = 'http://'
-YOUTUBETITLE   = 'http://' 
+YOUTUBETITLE   = 'FTG Help Videos' 
 YOUTUBEFILE    = 'http://'
 ADDONFILE      = 'http://'
 ADVANCEDFILE   = 'http://'
@@ -34,45 +34,45 @@ ART            = os.path.join(PATH, 'resources', 'art')
 # Only these colors avalable
 # white , blue , orange , yellow , red , purple , pink , lime , cyan, green
 #Button focus color
-FOCUS_BUTTON_COLOR = 'yellow'
-EXIT_BUTTON_COLOR = 'white'
+FOCUS_BUTTON_COLOR = 'green'
+EXIT_BUTTON_COLOR = 'red'
 #Highlight outline for lists
 HIGHLIGHT_LIST = 'button_focus'
 HIGHLIGHT_LIST2 = 'MenuItemFO'
 ##No TXT file Banner
-NO_TXT_FILE = 'red'
+NO_TXT_FILE = 'pink'
 
 ############################################
 ############################################
 ### The full list of colors for below can found @ https://forum.kodi.tv/showthread.php?tid=210837
 
 #Top Main buttons
-MAIN_BUTTONS_TEXT = 'darkturquoise'
+MAIN_BUTTONS_TEXT = 'white'
 #All other buttons
-OTHER_BUTTONS_TEXT = 'darkturquoise'
+OTHER_BUTTONS_TEXT = 'white'
 #all list text color
 ##FYI any color placed in the txt file will overide this
-LIST_TEXT = 'yellow'
+LIST_TEXT = 'khaki'
 
 
 #Description text title color
-DES_T_COLOR = 'yellow'
+DES_T_COLOR = 'white'
 #Description color
-DESCOLOR = 'white'
+DESCOLOR = 'black'
 
 #Wizard title name and verion color
-WIZTITLE = 'EzzerMacs Wizard'
-WIZTITLE_COLOR = 'darkturquoise'
-VERTITLE_COLOR = 'darkturquoise'
-VER_NUMBER_COLOR = 'white'
+WIZTITLE = 'EzZeRmAnS Wizard'
+WIZTITLE_COLOR = 'white'
+VERTITLE_COLOR = 'white'
+VER_NUMBER_COLOR = 'black'
 ############################################################
 
 ## The colors and theme below is still used for the pop up dialogs
 ##Alway test to see the color combo
 # You can edit these however you want, just make sure that you have a %s in each of the
 # THEME's so it grabs the text from the menu item
-COLOR1         = 'blue'
-COLOR2         = 'yellow'
+COLOR1         = 'white'
+COLOR2         = 'lime'
 COLOR3         = 'red'
 COLOR4         = 'snow'
 COLOR5         = 'lime'
@@ -97,26 +97,27 @@ THEME6         = '[COLOR '+COLOR3+'][B]%s[/B][/COLOR]'
 # Example:  ICONMAINT     = os.path.join(ART, 'mainticon.png')
 #           ICONSETTINGS  = 'http://aftermathwizard.net/repo/wizard/settings.png'
 # Leave as http:// for default icon
-ICONBUILDS     = 'http://'
-ICONMAINT      = 'http://'
-ICONAPK        = 'http://'
-ICONADDONS     = 'http://'
-ICONYOUTUBE    = 'http://'
-ICONSAVE       = 'http://'
-ICONTRAKT      = 'http://'
-ICONREAL       = 'http://'
-ICONLOGIN      = 'http://'
-ICONCONTACT    = 'http://'
-ICONSETTINGS   = 'http://'
+ICONBUILDS     = 'http://i.imgur.com/E7oBc7x.png'
+ICONMAINT      = 'http://i.imgur.com/E7oBc7x.png'
+ICONAPK        = 'http://i.imgur.com/E7oBc7x.png'
+ICONADDONS     = 'http://i.imgur.com/E7oBc7x.png'
+ICONYOUTUBE    = 'http://i.imgur.com/E7oBc7x.png'
+ICONSAVE       = 'http://i.imgur.com/E7oBc7x.png'
+ICONTRAKT      = 'http://i.imgur.com/E7oBc7x.png'
+ICONREAL       = 'http://i.imgur.com/E7oBc7x.png'
+ICONLOGIN      = 'http://i.imgur.com/E7oBc7x.png'
+ICONCONTACT    = 'http://i.imgur.com/E7oBc7x.png'
+ICONSETTINGS   = 'http://i.imgur.com/E7oBc7x.png'
 # Hide the ====== seperators 'Yes' or 'No'
 HIDESPACERS    = 'No'
 # Character used in seperator
-SPACER         = '*'
+SPACER         = '~'
+
 # Message for Contact Page
 # Enable 'Contact' menu item 'Yes' hide or 'No' dont hide
 HIDECONTACT    = 'No'
 # You can add \n to do line breaks
-CONTACT        = 'Welcome to the EzzerMacs Wizard.'
+CONTACT        = ''
 #Images used for the contact window.  http:// for default icon and fanart
 CONTACTICON    = os.path.join(ART, 'icon.png')
 CONTACTFANART  = 'http://'
@@ -154,10 +155,10 @@ NOTIFICATION   = 'http://'
 # Use either 'Text' or 'Image'
 HEADERTYPE     = 'Text'
 # Font size of header
-FONTHEADER     = 'Font25'
-HEADERMESSAGE  = 'EzzerMacs Wizard'
+FONTHEADER     = 'Font13'
+HEADERMESSAGE  = 'Matrix GUI Wizard'
 # url to image if using Image 424x180
-HEADERIMAGE    = 'Welcome To EzzerMacs Wizard'
+HEADERIMAGE    = ''
 # Font for Notification Window
 FONTSETTINGS   = 'Font12'
 # Background for Notification Window

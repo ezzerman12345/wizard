@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.program.EzzerMac" name="EzzerMac Wizard" version="1.2.6" provider-name="EzzerMac">
-	<requires>
-		<import addon="xbmc.python" version="3.0.0"/>
-		<import addon="script.module.kodi-six" version="0.0.5"/>
-		<import addon="script.module.certifi" version="2023.5.7"/>
-	</requires>
-	<extension point="xbmc.python.pluginsource" library="default.py">
+<addon id="plugin.program.ezzer19wiz" name="EzzerMans Wizard" version="1.1.2" provider-name="EzZeRmAn">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="script.module.six" />
+    <import addon="script.module.kodi-six" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>executable</provides>
-	</extension>
-	<extension point="xbmc.service" library="startup.py" start="startup" />
-	<extension point="xbmc.addon.metadata">
-		<summary lang="en">EzzerMacs Wizard</summary>
-		<description lang="en">There is everything you need in this Wizard from Repos to Addons To Wizards, A huge thanks to everyone who made it possible , Enjoy your stay.</description>
-		<platform>all</platform>
-		<assets>
-			<icon>icon.png</icon>
-			<fanart>fanart.jpg</fanart>
+  </extension>
+  <extension point="xbmc.service" library="startup.py" start="startup" />
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en">EzZeRmAnS Wizard</summary>
+    <description lang="en">In this wizard you will find the latest Matrix GUI Wizard and Tools. Thanks whufclee at NaN, GUYS at TI, Brackets for the app installer!! RomanVM for the PyXBMCt libs. Fire TV Guru for the PyXBMCt layout  Also a very special Thanks to Surfacingx for the base code used in this add-on.</description>
+    <platform>all</platform>
+    <assets>
+				<icon>icon.png</icon>
+				<fanart>fanart.jpg</fanart>
+				<banner></banner>
+				<clearlogo></clearlogo>
+				<screenshot></screenshot>
 		</assets>
-	</extension>
+  </extension>
 </addon>

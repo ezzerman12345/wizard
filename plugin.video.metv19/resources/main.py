@@ -3753,7 +3753,7 @@ def main_menu(time_data):
     key='zWrite'
     mypass=crypt(mypass,key)
 
-    aa=addDir3('[B][I][COLOR red]     M.E.T.V[/COLOR][/I][/B] - MOVIE SECTION', 'http://www.ezzer-mac.com/Addon/text/moviecat.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/ms.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - Movie Section',mypass=mypass)
+    aa=addDir3('[B][I][COLOR red]     M.E.T.V[/COLOR][/I][/B] - MOVIE SECTION', 'https://github.com/ezzerman12345/addon/blob/main/moviecat.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/ms.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - Movie Section',mypass=mypass)
     all_d.append(aa)
     aa=addDir3('[B][I][COLOR red]          M.E.T.V[/COLOR][/I][/B] - TV SECTION', 'http://ezzer-mac.com/Addon/text/ccomedylist.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/tvs.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - TV Section',mypass=mypass)
     all_d.append(aa)

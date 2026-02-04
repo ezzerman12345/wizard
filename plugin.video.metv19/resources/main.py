@@ -3777,7 +3777,7 @@ def main_menu(time_data):
     all_d.append(aa)
     aa=addDir3('[B][I][COLOR red]                  M.E.T.V[/COLOR][/I][/B] - TOP RATED TV', 'https://raw.githubusercontent.com/ezzerman12345/addon/refs/heads/main/trtv.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/trtv.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - TOP RATED TV',mypass=mypass)
     all_d.append(aa)
-    aa=addDir3('[B][I][COLOR red]                  M.E.T.V[/COLOR][/I][/B] - AIRING TODAY', 'http://ezzer-mac.com/Addon/at.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/at.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - AIRING TODAY',mypass=mypass)
+    aa=addDir3('[B][I][COLOR red]                  M.E.T.V[/COLOR][/I][/B] - AIRING TODAY', 'https://raw.githubusercontent.com/ezzerman12345/addon/refs/heads/main/at.xml',189,'http://ezzer-mac.com/Addon/images/newicon/mainmenu/at.png','http://ezzer-mac.com/Addon/images/newicon/fanart.jpg','M.E.T.V - AIRING TODAY',mypass=mypass)
     all_d.append(aa)    
     aa=addDir3( 'Search All', 'www',201,BASE_LOGO+'search.png',all_fanarts['32034'],'Search All')
         
